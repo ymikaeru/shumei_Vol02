@@ -151,20 +151,37 @@ def main():
                         if not orig_title or not content_pt:
                             continue
 
-                        # Find matching topic in the main original theme by title
                         match_found = False
-                        for i, topic in enumerate(topics):
-                            if topic.get("title") == orig_title:
+                        # Start searching from topic_cursor
+                        for i in range(topic_cursor, total_topics):
+                            topic = topics[i]
+                            if topic.get("title") == orig_title and not topic.get("title_pt"):
                                 topic["title_pt"] = title_pt
                                 topic["content_pt"] = content_pt
                                 topic["publication_title_pt"] = pub_title_pt
                                 match_found = True
                                 merged_count += 1
+                                topic_cursor = i + 1  # Update cursor to avoid matching same item again
                                 if merged_count <= 5:
                                     print(f"    Merged (Translated Part): {title_pt[:30]}... -> Topic {i}")
                                 elif merged_count == 6:
                                     print(f"    ... and more topics merged ...")
                                 break
+                                
+                        # Fallback if not found after cursor
+                        if not match_found:
+                            for i in range(0, topic_cursor):
+                                topic = topics[i]
+                                if topic.get("title") == orig_title and not topic.get("title_pt"):
+                                    topic["title_pt"] = title_pt
+                                    topic["content_pt"] = content_pt
+                                    topic["publication_title_pt"] = pub_title_pt
+                                    match_found = True
+                                    merged_count += 1
+                                    # Don't update topic_cursor here since we went backwards
+                                    if merged_count <= 5:
+                                        print(f"    Merged (Translated Part) [Fallback]: {title_pt[:30]}... -> Topic {i}")
+                                    break
                                 
                         if not match_found:
                             # Try matching by content length or content substring as fallback if title was somehow tweaked

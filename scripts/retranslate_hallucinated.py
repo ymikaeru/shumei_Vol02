@@ -6,9 +6,7 @@ import google.generativeai as genai
 from scripts.gemini_translate import translate_file
 
 files_to_fix = [
-    "theme_02_浄霊の方法_part_65.json",
-    "theme_02_浄霊の方法_part_76.json",
-    "theme_03_浄化作用_part_02.json"
+    "theme_04_三_毒_part_12_s08.json"
 ]
 
 def retranslate():
