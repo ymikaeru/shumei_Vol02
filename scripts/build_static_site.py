@@ -18,7 +18,8 @@ INDEX_FILES = [
 VOLUMES = [
     {'id': 'shumeic1', 'file': 'shumeic1_data_bilingual.json'},
     {'id': 'shumeic2', 'file': 'shumeic2_data_bilingual.json'},
-    {'id': 'shumeic3', 'file': 'shumeic3_data_bilingual.json'}
+    {'id': 'shumeic3', 'file': 'shumeic3_data_bilingual.json'},
+    {'id': 'shumeic4', 'file': 'shumeic4_data_bilingual.json'}
 ]
 
 CSS_CONTENT = """
@@ -190,8 +191,38 @@ def get_header_html(level_up=""):
 ALL_TOPICS = {} # filename -> {'pt_title': '...', 'ja_title': '...'}
 ALL_FLAT_TOPICS = []
 
+GLOBAL_INDEX_TITLES = {}
+
+def load_translated_index_titles():
+    for rel_path, level_up in INDEX_FILES:
+        if 'index' in rel_path and '/' in rel_path:
+            vol_id = rel_path.split('/')[0]
+            if vol_id not in GLOBAL_INDEX_TITLES:
+                GLOBAL_INDEX_TITLES[vol_id] = {}
+            
+            idx_path = os.path.join(ORIGINAL_HTML_DIR, rel_path)
+            if not os.path.exists(idx_path): continue
+            
+            try:
+                with open(idx_path, 'r', encoding='shift_jis') as f:
+                    html = f.read()
+            except UnicodeDecodeError:
+                with open(idx_path, 'r', encoding='utf-8', errors='ignore') as f:
+                    html = f.read()
+            
+            soup = BeautifulSoup(html, 'html.parser')
+            for a in soup.find_all('a'):
+                href = a.get('href')
+                if href and href.endswith('.html') and not href.startswith('http') and 'index' not in href:
+                    filename = href.split('/')[-1]
+                    title_pt = a.text.replace('・', '').strip()
+                    GLOBAL_INDEX_TITLES[vol_id][filename] = title_pt
+
 def load_all_json_data():
-    global ALL_TOPICS, ALL_FLAT_TOPICS
+    global ALL_TOPICS, ALL_FLAT_TOPICS, GLOBAL_INDEX_TITLES
+    
+    load_translated_index_titles()
+    
     for vol in VOLUMES:
         filepath = os.path.join(DATA_DIR, vol['file'])
         if not os.path.exists(filepath):
@@ -208,6 +239,9 @@ def load_all_json_data():
                     if "/" in filename:
                         filename = filename.split("/")[-1]
                     
+                    if filename.lower() in ["index.html", "index2.html"]:
+                        continue
+
                     if filename:
                         ALL_TOPICS[filename] = {
                             "pt_title": pt_title,
@@ -219,7 +253,6 @@ def load_all_json_data():
                         "vol_id": vol['id'],
                         "topic": topic
                     })
-
 
 
 def process_original_indexes():
@@ -255,9 +288,17 @@ def process_original_indexes():
         
         # Exact main index links translation
         inner_content = inner_content.replace('1.Compilação Plano Divino・Primazia do Espírito・Transição da Noite para o Dia・Culto aos Antepassados', '1. Volume 1')
-        inner_content = inner_content.replace('2.Compilação Johrei・Método de Saúde Divino・Agricultura Natural', '2. Volume 2')
-        inner_content = inner_content.replace('3.Compilação da Fé', '3. Volume 3')
-        inner_content = inner_content.replace('4.Outros', '4. Volume 4')
+        inner_content = inner_content.replace('2.Compilação Johrei・Método de Saúde Divino・Agricultura Natural', '2. Método Divino de Saúde')
+        inner_content = inner_content.replace('3.Compilação da Fé', '3. A Verdadeira Fé')
+        inner_content = inner_content.replace('4.Outros', '4. Ensinamentos Complementares')
+        
+        # Link fixes
+        inner_content = inner_content.replace('../shumeic5/index.html', '../shumeic4/index.html')
+        
+        # Header fixes
+        inner_content = inner_content.replace('Johrei・Método Divino de Saúde・Agricultura Natural', 'Método Divino de Saúde ・ Agricultura Natural')
+        inner_content = inner_content.replace('Curso por Correspondência　Seção da Fé', 'A Verdadeira Fé')
+        inner_content = inner_content.replace('Curso por Correspondência　Outros', 'Ensinamentos Complementares')
         new_html = f"""<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -299,6 +340,11 @@ def generate_all_topic_pages():
             filename = filename.split("/")[-1]
         if not filename:
             continue
+            
+        # Override title with translated index title if exists
+        override_title = GLOBAL_INDEX_TITLES.get(vol_id, {}).get(filename)
+        if override_title:
+            pt_title = override_title
 
         # Prev/Next links
         prev_link = ""

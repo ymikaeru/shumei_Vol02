@@ -3,10 +3,14 @@ import os
 import shutil
 import re
 from bs4 import BeautifulSoup, Comment
+import time
+
+CACHE_BUSTER = int(time.time())
 
 # Configuration
 DATA_DIR = './Data'
-OUTPUT_DIR = './SiteModerno'
+OUTPUT_DIR = 'SiteModerno'
+DATA_OUTPUT_DIR = 'site_data'
 ORIGINAL_HTML_DIR = './Data/translated_indexes'
 INDEX_FILES = [
     ('shumeic1/index.html', '../', 'shumeic1'),
@@ -14,7 +18,14 @@ INDEX_FILES = [
     ('shumeic2/index.html', '../', 'shumeic2'),
     ('shumeic3/index.html', '../', 'shumeic3'),
     ('shumeic4/index.html', '../', 'shumeic4'),
-]
+    ('shumeic4/index2.html', '../', 'shumeic4'),]
+# Track index titles parsed from the original HTML indexes to use them in the reader and search
+GLOBAL_INDEX_TITLES = {
+    'shumeic1': {},
+    'shumeic2': {},
+    'shumeic3': {},
+    'shumeic4': {}
+}
 
 VOLUMES = [
     {'id': 'shumeic1', 'file': 'shumeic1_data_bilingual.json'},
@@ -93,12 +104,13 @@ body {
   z-index: 2000; 
   height: var(--nav-height);
   padding: 0 40px;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
 }
 
 .header__logo {
+  grid-column: 1;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -126,9 +138,11 @@ body {
 }
 
 .header__nav { 
+  grid-column: 2;
   display: flex; 
   gap: 32px; 
   align-items: center; 
+  justify-content: center;
 }
 .header__nav a { 
   font-size: 13px; 
@@ -329,8 +343,10 @@ body {
 
 /* --- Controls --- */
 .controls {
+  grid-column: 3;
   display: flex;
   gap: 12px;
+  justify-content: flex-end;
 }
 
 .btn-zen {
@@ -360,6 +376,168 @@ body {
   color: var(--text-main);
 }
 .btn-zen.active { background: var(--text-main); color: var(--surface); border-color: var(--text-main); }
+
+/* --- Search Modal UI --- */
+.search-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 99999;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 10vh;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.search-modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.search-modal {
+  background: var(--surface);
+  width: 100%;
+  max-width: 680px;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-premium);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+  transform: translateY(-20px);
+  transition: transform 0.3s var(--ease);
+}
+
+.search-modal-overlay.active .search-modal {
+  transform: translateY(0);
+}
+
+.search-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.search-input-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.search-filters {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  font-family: var(--font-ui);
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.filter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.filter-label:hover {
+  color: var(--text-main);
+}
+
+.filter-label input[type="radio"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  color: var(--text-main);
+  outline: none;
+  font-family: var(--font-ui);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.search-results {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.search-result-item {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.2s;
+}
+
+.search-result-item:hover {
+  background: rgba(184, 134, 11, 0.05); /* Accent tint */
+}
+
+.search-result-title {
+  font-family: var(--font-serif);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.search-result-context {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.search-loading, .search-empty {
+  padding: 32px;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* --- Reader Highlight Styles --- */
+mark.search-highlight {
+  background-color: rgba(184, 134, 11, 0.3);
+  color: inherit;
+  padding: 2px 0;
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(184, 134, 11, 0.2);
+}
+[data-theme="dark"] mark.search-highlight {
+  background-color: rgba(212, 175, 55, 0.4);
+}
 
 /* --- Mobile Fixes --- */
 /* --- Tooltips --- */
@@ -431,6 +609,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // Theme Toggle Logic
   const savedTheme = localStorage.getItem('theme') || 'light';
   document.documentElement.setAttribute('data-theme', savedTheme);
+
+  // Global Language Logic
+  const savedLang = localStorage.getItem('site_lang') || 'pt';
+  setLanguage(savedLang, false); // Initialize without re-rendering if on reader (reader handles its own init)
 });
 
 async function toggleTheme() {
@@ -439,6 +621,266 @@ async function toggleTheme() {
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
 }
+
+function setLanguage(lang, triggerRender = true) {
+  localStorage.setItem('site_lang', lang);
+  
+  // Update button states
+  document.querySelectorAll('.btn-zen').forEach(b => {
+    if (b.id === 'btn-pt') {
+      lang === 'pt' ? b.classList.add('active') : b.classList.remove('active');
+    } else if (b.id === 'btn-ja') {
+      lang === 'ja' ? b.classList.add('active') : b.classList.remove('active');
+    }
+  });
+
+  // Toggle visibility of lang-specific elements
+  document.querySelectorAll('.lang-pt').forEach(el => el.style.display = (lang === 'pt' ? 'inline' : 'none'));
+  document.querySelectorAll('.lang-ja').forEach(el => el.style.display = (lang === 'ja' ? 'inline' : 'none'));
+
+  // Trigger content re-rendering if the function exists (used on the reader page)
+  if (triggerRender && typeof window.renderContent === 'function') {
+    window.renderContent(lang);
+  }
+}
+
+// --- Global Search Logic ---
+let searchIndex = null;
+let isFetchingIndex = false;
+let searchTimeout = null;
+
+async function getSearchIndex() {
+  if (searchIndex) return searchIndex;
+  
+  if (isFetchingIndex) {
+    // Wait until it's done fetching
+    while (isFetchingIndex) {
+      await new Promise(r => setTimeout(r, 100));
+    }
+    return searchIndex;
+  }
+  
+  isFetchingIndex = true;
+  document.getElementById('searchResults').innerHTML = '<li class="search-loading">Carregando índice de pesquisa (isso pode levar alguns instantes na primeira vez)...</li>';
+  
+  // Determine relative path to data folder based on current URL
+  const basePath = window.location.href.includes('/shumeic') ? '../' : './';
+  
+  try {
+    const response = await fetch(`${basePath}Data/search_index.json`);
+    if (!response.ok) throw new Error('Falha ao carregar o índice');
+    searchIndex = await response.json();
+  } catch (err) {
+    console.error(err);
+    document.getElementById('searchResults').innerHTML = '<li class="search-error">Erro ao carregar o índice de pesquisa. Verifique sua conexão.</li>';
+  } finally {
+    isFetchingIndex = false;
+  }
+  
+  return searchIndex;
+}
+
+function openSearch() {
+  const modal = document.getElementById('searchModal');
+  const input = document.getElementById('searchInput');
+  if (modal) {
+    modal.classList.add('active');
+    input.focus();
+    // Pre-fetch the index as soon as search is opened
+    getSearchIndex();
+  }
+}
+
+function closeSearch() {
+  const modal = document.getElementById('searchModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
+
+function performSearch(query) {
+  const resultsEl = document.getElementById('searchResults');
+  if (!query || query.trim().length < 3) {
+    resultsEl.innerHTML = '<li class="search-empty">Digite pelo menos 3 caracteres para buscar.</li>';
+    return;
+  }
+  
+  if (!searchIndex) return; // Still loading, getSearchIndex will handle it
+  
+  const q = query.toLowerCase().trim();
+  const filterNodes = document.querySelectorAll('input[name="searchFilter"]');
+  let filterMode = 'all';
+  for (const node of filterNodes) {
+    if (node.checked) {
+      filterMode = node.value;
+      break;
+    }
+  }
+
+  let results = [];
+  
+  // Search through index
+  for (let item of searchIndex) {
+    let score = 0;
+    let matchTitle = false;
+    let matchContent = false;
+    
+    // Exactly Title
+    if (item.t.toLowerCase() === q) {
+      matchTitle = true;
+      score += 100;
+    }
+    // Sub-title match
+    else if (item.t.toLowerCase().includes(q)) {
+      matchTitle = true;
+      score += 50;
+    }
+    
+    // Content match
+    const cLower = item.c.toLowerCase();
+    const cIdx = cLower.indexOf(q);
+    if (cIdx !== -1) {
+      matchContent = true;
+      score += 10;
+      // Extract a snippet of content around the match for context
+      const start = Math.max(0, cIdx - 60);
+      const end = Math.min(item.c.length, cIdx + query.length + 60);
+      let snippet = item.c.substring(start, end);
+      if (start > 0) snippet = '...' + snippet;
+      if (end < item.c.length) snippet = snippet + '...';
+      
+      item.snippet = snippet;
+    }
+
+    // Apply Filters
+    if (filterMode === 'title' && !matchTitle) continue;
+    if (filterMode === 'content' && !matchContent) continue;
+    if (score === 0) continue;
+    
+    // Add to results
+    results.push({ ...item, score });
+  }
+  
+  // Sort by score (best match first), then take top 50 to avoid DOM lag
+  results.sort((a, b) => b.score - a.score);
+  results = results.slice(0, 50);
+  
+  if (results.length === 0) {
+    resultsEl.innerHTML = '<li class="search-empty">Nenhum resultado encontrado.</li>';
+    return;
+  }
+  
+  // Render results
+  const basePath = window.location.href.includes('/shumeic') ? '../' : './';
+  
+  resultsEl.innerHTML = results.map(r => {
+    const fileBase = r.f.replace('.json', '.html').replace('.txt', '.html');
+    const href = `${basePath}reader.html?vol=${r.v}&file=${r.f}&search=${encodeURIComponent(query)}`;
+    
+    const highlightedSnippet = (r.snippet || '').replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+    
+    return `
+      <li>
+        <a href="${href}" class="search-result-item">
+          <div class="search-result-title">${r.t} <span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal;">(Vol ${r.v.slice(-1)})</span></div>
+          <div class="search-result-context">${highlightedSnippet}</div>
+        </a>
+      </li>
+    `;
+  }).join('');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const closeBtn = document.getElementById('searchClose');
+  const modalBtn = document.getElementById('searchModal');
+  const searchInput = document.getElementById('searchInput');
+  
+  if (closeBtn) closeBtn.addEventListener('click', closeSearch);
+  if (modalBtn) modalBtn.addEventListener('click', (e) => {
+    if (e.target.id === 'searchModal') closeSearch();
+  });
+  
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeSearch();
+    // Ctrl+K or Cmd+K to open search
+    if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      e.preventDefault();
+      openSearch();
+    }
+  });
+  
+  const triggerSearch = () => {
+    clearTimeout(searchTimeout);
+    const query = searchInput.value;
+    
+    const resultsEl = document.getElementById('searchResults');
+    resultsEl.innerHTML = '<li class="search-loading">Buscando...</li>';
+    
+    searchTimeout = setTimeout(async () => {
+      await getSearchIndex();
+      performSearch(query);
+    }, 400); // 400ms debounce
+  };
+
+  if (searchInput) {
+    searchInput.addEventListener('input', triggerSearch);
+  }
+
+  // Also trigger search when changing filters if there's text
+  const filterNodes = document.querySelectorAll('input[name="searchFilter"]');
+  filterNodes.forEach(node => {
+     node.addEventListener('change', () => {
+         if (searchInput.value.trim().length >= 3) {
+             triggerSearch();
+         }
+     });
+  });
+
+  // Add history events
+  const historyModalBtn = document.getElementById('historyModal');
+  if (historyModalBtn) historyModalBtn.addEventListener('click', (e) => {
+    if (e.target.id === 'historyModal') closeHistory();
+  });
+});
+
+// --- Navigation History Logic ---
+function openHistory() {
+  const modal = document.getElementById('historyModal');
+  const resultsEl = document.getElementById('historyResults');
+  if (modal && resultsEl) {
+    modal.classList.add('active');
+    
+    const basePath = window.location.href.includes('/shumeic') ? '../' : './';
+    const history = JSON.parse(localStorage.getItem('readHistory') || '[]');
+    
+    if (history.length === 0) {
+      resultsEl.innerHTML = '<li class="search-empty">Nenhum histórico recente.</li>';
+      return;
+    }
+    
+    resultsEl.innerHTML = history.map(r => {
+      const href = `${basePath}reader.html?vol=${r.vol}&file=${r.file}`;
+      const date = new Date(r.time);
+      const timeStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
+      
+      return `
+        <li>
+          <a href="${href}" class="search-result-item">
+            <div class="search-result-title">${r.title} <span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal;">(Vol ${r.vol.slice(-1)})</span></div>
+            <div class="search-result-context">Visualizado em ${timeStr}</div>
+          </a>
+        </li>
+      `;
+    }).join('');
+  }
+}
+
+function closeHistory() {
+  const modal = document.getElementById('historyModal');
+  if (modal) {
+    modal.classList.remove('active');
+  }
+}
 """
 
 READER_JS = r"""
@@ -446,7 +888,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     const volId = params.get('vol');
     const filename = params.get('file');
+    const searchQuery = params.get('search');
     const container = document.getElementById('readerContainer');
+    const basePath = './';
     
     if (!volId || !filename) {
         container.innerHTML = `<div class="error">Selecione um ensinamento no índice.</div>`;
@@ -454,9 +898,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     try {
-        const response = await fetch(`data/${volId}_data_bilingual.json`);
+        const response = await fetch(`${basePath}${window.DATA_OUTPUT_DIR || 'site_data'}/${volId}_data_bilingual.json`);
         const json = await response.json();
         let topicsFound = [];
+
+        // Flatten all unique files for navigation
+        const allFiles = [];
+        json.themes.forEach(theme => {
+            theme.topics.forEach(topic => {
+                const f = topic.source_file || topic.filename || "";
+                if (f && !allFiles.includes(f)) allFiles.push(f);
+            });
+        });
+
+        const currentIndex = allFiles.indexOf(filename);
+        const prevFile = currentIndex > 0 ? allFiles[currentIndex - 1] : null;
+        const nextFile = currentIndex < allFiles.length - 1 ? allFiles[currentIndex + 1] : null;
 
         for (const theme of json.themes || []) {
             for (const topic of theme.topics || []) {
@@ -475,61 +932,166 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.renderContent = (lang = 'pt') => {
             const isPt = lang === 'pt';
             
-            let fullHtml = '';
-            const select = document.getElementById('readerTopicSelect');
-            if (select) {
-                select.innerHTML = '<option value="">Navegação por Publicações</option>';
-                select.style.display = topicsFound.length > 1 ? 'inline-block' : 'none';
+            let indexTitles = {};
+            try {
+                indexTitles = window.GLOBAL_INDEX_TITLES || {};
+            } catch (e) {}
+            
+            const indexTitle = (indexTitles[volId] && indexTitles[volId][filename]) ? indexTitles[volId][filename] : null;
+            const fallbackTitle = isPt ? (topicsFound[0].title_ptbr || topicsFound[0].title_pt || topicsFound[0].title) : topicsFound[0].title;
+            const mainTitleToDisplay = (isPt && indexTitle) ? indexTitle : fallbackTitle;
+
+            // --- History Saving Logic ---
+            try {
+                const history = JSON.parse(localStorage.getItem('readHistory') || '[]');
+                const newEntry = {
+                    title: mainTitleToDisplay.replace(/<br\s*\/?>/gi, ' '),
+                    vol: volId,
+                    file: filename,
+                    time: Date.now()
+                };
+                const filtered = history.filter(h => h.file !== filename || h.vol !== volId);
+                filtered.unshift(newEntry);
+                localStorage.setItem('readHistory', JSON.stringify(filtered.slice(0, 20)));
+            } catch (e) {}
+
+            let fullHtml = `
+                <div class="topic-header" style="margin-bottom: 40px; text-align: center;">
+                    <h1 class="topic-title-large" style="font-size: 2.2rem; margin-bottom: 16px;">${mainTitleToDisplay}</h1>
+                </div>
+            `;
+
+            const navSelect = document.getElementById('readerTopicSelect');
+            if (navSelect) {
+                navSelect.innerHTML = '<option value="">Navegação por Publicações</option>';
+                navSelect.style.display = 'none';
             }
             
             topicsFound.forEach((topicData, index) => {
-                const title = isPt ? (topicData.title_ptbr || topicData.title_pt || topicData.title) : topicData.title;
-                const content = isPt ? (topicData.content_ptbr || topicData.content_pt || topicData.content) : topicData.content;
                 const topicId = `topic-${index}`;
-
-                if (select) {
-                    const opt = document.createElement('option');
-                    opt.value = `#${topicId}`;
-                    opt.textContent = title;
-                    select.appendChild(opt);
-                }
                 
-                // Clean up content: wrap double breaks in paragraphs if needed, or maintain HTML
-                let formattedContent = content.replace(/\n\n/g, '</p><p>');
+                // Content cleanup
+                let formattedContent = "";
+                if (isPt) {
+                    formattedContent = topicData.content_ptbr || topicData.content_pt || topicData.content || "";
+                } else {
+                    formattedContent = topicData.content || "";
+                }
 
-                // Fix image paths to point to assets/images/
+                // Strip all <font> inline-style attributes except color (already stripped below)
+                // This prevents Japanese fonts from affecting rendering
+                formattedContent = formattedContent.replace(/<font(\s[^>]*)>/gi, (m, attrs) => {
+                    // Keep only href-like content, discard face/size/etc
+                    return '<span>';
+                }).replace(/<\/font>/gi, '</span>');
+
+                formattedContent = formattedContent.replace(/\\n\\n/g, '</p><p>');
+
                 formattedContent = formattedContent.replace(/src=["']([^"']+)["']/g, (match, src) => {
                     if (src.startsWith('http') || src.startsWith('data:') || src.startsWith('assets/')) return match;
                     return `src="assets/images/${src}"`;
                 });
 
-                // NO separator line here to avoid double lines and follow user request
-                // Strip legacy font colors that might cause "strange blue" headings
                 let cleanedContent = formattedContent.replace(/color=["'][^"']+["']/g, '');
                 cleanedContent = cleanedContent.replace(/style=["'][^"']*color:[^"']+["']/g, '');
 
+                // DOM-based: remove leading element ONLY if its stripped text is an exact match
+                // to the main title (prevents removing teaching titles that just share a word)
+                const _tmp = document.createElement('div');
+                _tmp.innerHTML = cleanedContent;
+                const _first = _tmp.firstElementChild;
+                if (_first && !_first.querySelector('blockquote, p, div, ul, ol, table')) {
+                    const elPlain = _first.textContent.replace(/[\u3000\s\d\u30FB\u00B7\.\"\u300c\u300d]/g, '').toLowerCase();
+                    const titlePlain = mainTitleToDisplay.replace(/<[^>]+>/g, '').replace(/[\u3000\s\d\u30FB\u00B7\.\"\u300c\u300d]/g, '').toLowerCase();
+                    // Only strip on EXACT match to avoid removing valid teaching titles
+                    if (elPlain.length > 0 && elPlain.length < 80 && elPlain === titlePlain) {
+                        _first.remove();
+                        cleanedContent = _tmp.innerHTML;
+                    }
+                }
+
+                // Filter "Unknown" dates
+                let displayDate = topicData.date;
+                if (displayDate === "Unknown") displayDate = "";
+
+                // Add topic to navigation select if multiple topics
+                if (navSelect && topicsFound.length > 1) {
+                    const topicTitle = (isPt ? (topicData.title_ptbr || topicData.title_pt || topicData.title) : topicData.title) || `Publicação ${index + 1}`;
+                    const op = document.createElement('option');
+                    op.value = `#${topicId}`;
+                    op.textContent = topicTitle.replace(/<[^>]+>/g, '');
+                    navSelect.appendChild(op);
+                }
+
                 fullHtml += `
-                    <div id="${topicId}" class="topic-header" style="margin-top: ${index > 0 ? '80px' : '0'}; border-top: ${index > 0 ? '1px solid var(--border)' : 'none'}; padding-top: ${index > 0 ? '40px' : '0'};">
-                        <h1 class="topic-title-large">${title}</h1>
-                        <div class="topic-meta">${topicData.date || 'Sem data'}</div>
-                    </div>
-                    <div class="topic-content">
+                    <div id="${topicId}" class="topic-content" style="margin-top: ${index > 0 ? '40px' : '0'};">
+                        ${displayDate ? `<div class="topic-meta" style="margin-bottom: 16px;">${displayDate}</div>` : ''}
                         ${cleanedContent}
                     </div>
                 `;
             });
 
+            // Show select only if multiple topics (use already-declared outer variable)
+            if (navSelect) navSelect.style.display = topicsFound.length > 1 ? 'inline-block' : 'none';
+
+            // Navigation Footer
+            const navFooter = `
+                <div class="reader-nav-footer" style="display: flex; justify-content: space-between; margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--border);">
+                    ${prevFile ? `<a href="?vol=${volId}&file=${prevFile}" class="btn-zen" style="text-decoration:none">← Anterior</a>` : '<span></span>'}
+                    ${nextFile ? `<a href="?vol=${volId}&file=${nextFile}" class="btn-zen" style="text-decoration:none">Próximo →</a>` : '<span></span>'}
+                </div>
+            `;
+
             container.innerHTML = `
                 <nav class="breadcrumbs">
-                    <a href="shumeic1/index.html">Início</a> <span>/</span> 
+                    <a href="index.html">Início</a> <span>/</span> 
                     <a href="${volId}/index.html">Volume ${volId.slice(-1)}</a> <span>/</span>
                     <span style="color:var(--text-main)">Leitura</span>
                 </nav>
                 <div class="reader-container">
                     ${fullHtml}
+                    ${navFooter}
                 </div>
             `;
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                const contentBlocks = container.querySelectorAll('.topic-content, .topic-title-large');
+                let firstMatch = null;
+                
+                contentBlocks.forEach(block => {
+                    const walker = document.createTreeWalker(block, NodeFilter.SHOW_TEXT, null, false);
+                    let node;
+                    const textNodes = [];
+                    while(node = walker.nextNode()) textNodes.push(node);
+                    
+                    textNodes.forEach(textNode => {
+                        if (textNode.parentNode && textNode.parentNode.nodeName === 'MARK') return;
+                        const val = textNode.nodeValue;
+                        if (val.toLowerCase().includes(q) && val.trim().length > 0) {
+                            const regex = new RegExp(`(${searchQuery})`, 'gi');
+                            const fragment = document.createDocumentFragment();
+                            const div = document.createElement('div');
+                            div.innerHTML = val.replace(regex, '<mark class="search-highlight">$1</mark>');
+                            while (div.firstChild) fragment.appendChild(div.firstChild);
+                            
+                            if (!firstMatch) {
+                                firstMatch = fragment.querySelector('mark');
+                            }
+                            textNode.parentNode.replaceChild(fragment, textNode);
+                        }
+                    });
+                });
+                
+                if (firstMatch) {
+                    setTimeout(() => {
+                        window.scrollTo({
+                             top: firstMatch.getBoundingClientRect().top + window.scrollY - 100,
+                             behavior: 'smooth'
+                        });
+                    }, 500);
+                }
+            }
         };
 
         renderContent('pt');
@@ -539,11 +1101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 });
 
-function setLanguage(lang) {
-    document.querySelectorAll('.btn-zen').forEach(b => b.classList.remove('active'));
-    document.getElementById('btn-' + lang).classList.add('active');
-    if(window.renderContent) window.renderContent(lang);
-}
+// setLanguage is now defined globally in toggle.js
 """
 
 READER_HTML = """<!DOCTYPE html>
@@ -556,24 +1114,27 @@ READER_HTML = """<!DOCTYPE html>
 </head>
 <body>
   <header class="header">
-    <a href="shumeic1/index.html" class="header__logo">
+    <a href="index.html" class="header__logo">
       <div class="logo-circle">
         <div class="logo-dot"></div>
       </div>
       Biblioteca Sagrada
     </a>
     <div class="header__nav">
-       <a href="shumeic1/index.html" data-tooltip="Mundo Espiritual・Espírito Precede a Matéria・Transição da Noite para o Dia・Culto aos Antepassados"><span>Vol 1</span></a>
-       <a href="shumeic2/index.html" data-tooltip="Johrei・Método Divino de Saúde・Agricultura Natural"><span>Vol 2</span></a>
-       <a href="shumeic3/index.html" data-tooltip="Seção da Fé"><span>Vol 3</span></a>
-       <a href="shumeic4/index.html" data-tooltip="Outros Ensinamentos"><span>Vol 4</span></a>
+       <a href="index.html" style="font-weight:600; opacity:0.7;"><span>⌂ Início</span></a>
+       <a href="index2.html" data-tooltip="Mundo Espiritual・Espírito Precede a Matéria・Transição da Noite para o Dia・Culto aos Antepassados"><span>Vol 1</span></a>
+       <a href="shumeic2/index.html" data-tooltip="Método Divino de Saúde・Agricultura Natural"><span>Vol 2</span></a>
+       <a href="shumeic3/index.html" data-tooltip="A Verdadeira Fé"><span>Vol 3</span></a>
+       <a href="shumeic4/index.html" data-tooltip="Ensinamentos Complementares"><span>Vol 4</span></a>
        <select id="readerTopicSelect" class="btn-zen" onchange="location.hash=this.value" style="max-width:250px; display:none;">
             <option value="">Navegação por Publicações</option>
        </select>
     </div>
     <div class="controls">
-      <button class="btn-zen active" id="btn-pt" onclick="setLanguage('pt')">PT-BR</button>
-      <button class="btn-zen" id="btn-ja" onclick="setLanguage('ja')">日本語</button>
+      <button class="btn-zen" onclick="openHistory()" title="Histórico de Navegação">🕒</button>
+      <button class="btn-zen" onclick="openSearch()" title="Buscar">🔍</button>
+      <button class="btn-zen active" id="btn-pt" onclick="if(typeof setLanguage === 'function') setLanguage('pt'); else { location.href='../index.html'; }">PT-BR</button>
+      <button class="btn-zen" id="btn-ja" onclick="if(typeof setLanguage === 'function') setLanguage('ja'); else { location.href='../index2.html'; }">日本語</button>
       <button class="btn-zen" onclick="toggleTheme()" title="Mudar Tema">☯</button>
     </div>
   </header>
@@ -582,20 +1143,59 @@ READER_HTML = """<!DOCTYPE html>
         <div style="text-align:center; color:var(--text-muted)">Preparando leitura...</div>
     </div>
   </main>
-  <script src="js/toggle.js"></script>
-  <script src="js/reader.js"></script>
+
+  <div class="search-modal-overlay" id="searchModal">
+    <div class="search-modal">
+      <div class="search-header">
+        <div class="search-input-row">
+          <input type="text" class="search-input" id="searchInput" placeholder="Buscar nos ensinamentos..." autocomplete="off">
+          <button class="search-close" id="searchClose">&times;</button>
+        </div>
+        <div class="search-filters">
+          <label class="filter-label"><input type="radio" name="searchFilter" value="all" checked> Tudo</label>
+          <label class="filter-label"><input type="radio" name="searchFilter" value="title"> Só Título</label>
+          <label class="filter-label"><input type="radio" name="searchFilter" value="content"> Só Conteúdo</label>
+        </div>
+      </div>
+      <ul class="search-results" id="searchResults"></ul>
+    </div>
+  </div>
+
+  <div class="search-modal-overlay" id="historyModal">
+    <div class="search-modal">
+      <div class="search-header">
+        <h2 style="font-size: 1.2rem; margin:0; color: var(--accent);">Histórico de Navegação</h2>
+        <button class="search-close" onclick="closeHistory()">&times;</button>
+      </div>
+      <ul class="search-results" id="historyResults"></ul>
+    </div>
+  </div>
+
+  <script src="js/toggle.js?v={CACHE_BUSTER}"></script>
+  <script src="js/reader.js?v={CACHE_BUSTER}"></script>
 </body>
 </html>
 """
 
 def create_dirs():
-    if os.path.exists(OUTPUT_DIR):
-        shutil.rmtree(OUTPUT_DIR)
-    os.makedirs(f"{OUTPUT_DIR}/css", exist_ok=True)
-    os.makedirs(f"{OUTPUT_DIR}/js", exist_ok=True)
-    os.makedirs(f"{OUTPUT_DIR}/data", exist_ok=True)
-    for vol in ['shumeic1', 'shumeic2', 'shumeic3', 'shumeic4']:
-        os.makedirs(f"{OUTPUT_DIR}/{vol}", exist_ok=True)
+    """Create necessary directories and clean up old output files."""
+    # List of directories we manage and can safely clear/create
+    managed_dirs = ['css', 'js', DATA_OUTPUT_DIR, 'assets', 'shumeic1', 'shumeic2', 'shumeic3', 'shumeic4']
+    
+    for d in managed_dirs:
+        dir_path = os.path.join(OUTPUT_DIR, d)
+        if os.path.exists(dir_path):
+            shutil.rmtree(dir_path)
+        os.makedirs(dir_path, exist_ok=True)
+    
+    # We also manage specifically named root files
+    managed_files = ['index.html', 'index2.html']
+    for f in managed_files:
+        file_path = os.path.join(OUTPUT_DIR, f)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+    # Assets subdirs
     os.makedirs(f"{OUTPUT_DIR}/assets/images", exist_ok=True)
 
     with open(f"{OUTPUT_DIR}/css/styles.css", "w", encoding="utf-8") as f:
@@ -609,9 +1209,23 @@ def create_dirs():
 
 def process_indexes():
     """Processes the original HTML indexes to maintain themes, spacing, and hierarchy."""
-    for rel_path, level_up, vol_id in INDEX_FILES:
+    for rel_path, level_path, vol_id in INDEX_FILES:
         src = os.path.join(ORIGINAL_HTML_DIR, rel_path)
-        dest = os.path.join(OUTPUT_DIR, rel_path)
+        
+        # Determine destination filename
+        if rel_path.endswith('index.html') and vol_id == 'shumeic1':
+            dest_filename = 'index.html'
+            dest = os.path.join(OUTPUT_DIR, dest_filename)
+            level_up = '' # Root items don't need level_up
+        elif rel_path.endswith('index2.html') and vol_id == 'shumeic1':
+            dest_filename = 'index2.html'
+            dest = os.path.join(OUTPUT_DIR, dest_filename)
+            level_up = ''
+        else:
+            # For other volumes, keep them in their subdirectories
+            dest = os.path.join(OUTPUT_DIR, rel_path)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            level_up = '../'
         
         if not os.path.exists(src): 
             print(f"Warning: {src} not found.")
@@ -635,23 +1249,30 @@ def process_indexes():
         def clean_text(text):
             if not text: return ""
             # Fix known broken words from original formatting
-            text = text.replace('Verda　de', 'Verdade')
-            text = text.replace('Supersti　ção', 'Superstição')
-            text = text.replace('Budis　mo', 'Budismo')
-            text = text.replace('Fan　tasma', 'Fantasma')
-            text = text.replace('Espí　rito', 'Espírito')
+            text = text.replace('Verda\u3000de', 'Verdade')
+            text = text.replace('Supersti\u3000\u00e7\u00e3o', 'Superstição')
+            text = text.replace('Budis\u3000mo', 'Budismo')
+            text = text.replace('Fan\u3000tasma', 'Fantasma')
+            text = text.replace('Esp\u00ed\u3000rito', 'Espírito')
+            
+            # Normalize full-width digits to ASCII digits to avoid serif rendering issues
+            full_width_digits = '\uff10\uff11\uff12\uff13\uff14\uff15\uff16\uff17\uff18\uff19'
+            for i, fw in enumerate(full_width_digits):
+                text = text.replace(fw, str(i))
             
             # Replace remaining full-width spaces with regular space
-            text = text.replace('　', ' ')
+            text = text.replace('\u3000', ' ')
             # Collapse multiple spaces and strip
             return re.sub(r'\s+', ' ', text).strip()
 
         section_headers = []
-        def traverse_and_convert(element):
+        def traverse_and_convert(element, vol_data_lookup=None, theme_lookup=None):
             nonlocal topic_count
             html_parts = []
             last_was_topic = False
             last_was_br = False
+            
+            theme_lookup = theme_lookup or {}
             
             for child in element.children:
                 # Ignore comments and scripts
@@ -665,11 +1286,25 @@ def process_indexes():
                         continue
                     
                     filename = href.split('/')[-1]
-                    title = clean_text(child.get_text().replace('・', ''))
+                    title_pt = clean_text(child.get_text().replace('・', ''))
+                    
+                    # Lookup bilingual title
+                    title_ja = title_pt
+                    if vol_data_lookup and filename in vol_data_lookup:
+                        title_ja = vol_data_lookup[filename].get('title_ja', title_pt)
+                        # We specifically DO NOT use the JSON title for title_pt, 
+                        # because translated_indexes is the source of truth for the Portuguese titles
+
+                    if vol_id in GLOBAL_INDEX_TITLES:
+                        GLOBAL_INDEX_TITLES[vol_id][filename] = title_pt
+
                     html_parts.append(f"""
                     <a href="{level_up}reader.html?vol={vol_id}&file={filename}" class="topic-card">
                         <div class="topic-card__icon">{topic_count}</div>
-                        <div class="topic-card__title">{title}</div>
+                        <div class="topic-card__title">
+                            <span class="lang-pt">{title_pt}</span>
+                            <span class="lang-ja" style="display:none">{title_ja}</span>
+                        </div>
                     </a>""")
                     topic_count += 1
                     last_was_topic = True
@@ -705,7 +1340,8 @@ def process_indexes():
                             "Operado por um indivíduo e sem relação",
                             "Coletânea de Ensinamentos de Meishu-sama",
                             "por membros da Shinji Shumeikai",
-                            "Mestre Mokichi Okada"
+                            "Mestre Mokichi Okada",
+                            "Seção da Fé",
                         ]
                         if any(x in text for x in skip_list):
                             continue
@@ -727,12 +1363,20 @@ def process_indexes():
                             continue
 
                         header_id = f"section-{len(section_headers)}"
+                        # Map header to Japanese if possible
+                        ja_header = theme_lookup.get(title_clean, 
+                                     theme_lookup.get(title_clean.lower(), title_clean))
+                        
                         section_headers.append({'id': header_id, 'title': dropdown_title})
-                        html_parts.append(f'<{child.name} id="{header_id}" class="section-header">{title_clean}</{child.name}>')
+                        html_parts.append(f"""
+                        <{child.name} id="{header_id}" class="section-header">
+                            <span class="lang-pt">{title_clean}</span>
+                            <span class="lang-ja" style="display:none">{ja_header}</span>
+                        </{child.name}>""")
                         last_was_topic = False
                         last_was_br = False
                     else:
-                        inner = traverse_and_convert(child)
+                        inner = traverse_and_convert(child, vol_data_lookup, theme_lookup)
                         if inner:
                             html_parts.append(inner)
                             last_was_topic = False
@@ -756,8 +1400,16 @@ def process_indexes():
                                 continue
 
                             header_id = f"section-{len(section_headers)}"
+                            # Map header to Japanese if possible
+                            ja_header = theme_lookup.get(text, 
+                                         theme_lookup.get(text.lower(), text))
+                            
                             section_headers.append({'id': header_id, 'title': dropdown_title})
-                            html_parts.append(f'<div id="{header_id}" class="section-header">{text}</div>')
+                            html_parts.append(f"""
+                            <div id="{header_id}" class="section-header">
+                                <span class="lang-pt">{text}</span>
+                                <span class="lang-ja" style="display:none">{ja_header}</span>
+                            </div>""")
                         else:
                             html_parts.append(f'<div class="plain-text">{text}</div>')
                         last_was_topic = False
@@ -765,35 +1417,66 @@ def process_indexes():
             
             return "".join(html_parts)
 
+        # Default Japanese button action (overridden per volume below)
+        has_ja_index = vol_id in ('shumeic1', 'shumeic4')
+        ja_btn_onclick = "if(typeof setLanguage === 'function') setLanguage('ja'); else window.location.href='index2.html';" if has_ja_index else "if(typeof setLanguage === 'function') setLanguage('ja');"
+
         # Build custom content for shumeic1/index.html (Home)
         if 'shumeic1/index.html' == rel_path:
             content_html = f"""
             <div class="home-hero">
-                
-                <h1 class="index-title" style="margin-bottom:16px">Ensinamentos de Meishu-Sama</h1>
+                <h1 class="index-title" style="margin-bottom:16px">
+                    <span class="lang-pt">Ensinamentos de Meishu-Sama</span>
+                    <span class="lang-ja" style="display:none">明主様御教え</span>
+                </h1>
                 <p style="text-align:center; color:var(--text-muted); margin-bottom:48px; max-width:600px; margin-inline:auto;">
-                    Tradução em português das obras de Meishu-Sama, organizadas em volumes temáticos para estudo e reflexão.
+                    <span class="lang-pt">Tradução em português das obras de Meishu-Sama, organizadas em volumes temáticos para estudo e reflexão.</span>
+                    <span class="lang-ja" style="display:none">明主様の御教えをテーマ別にまとめた日本語とポルトガル語の聖書図書館です。</span>
                 </p>
                 <div class="topic-list" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));">
                     <a href="index2.html" class="topic-card" style="flex-direction:column; align-items:flex-start; height:100%; padding: 32px;">
                         <span class="section-label" style="text-align:left; margin-bottom:12px;">Volume 1</span>
-                        <div class="topic-card__title" style="font-size:22px; margin-bottom:8px">Mundo Espiritual</div>
-                        <div style="font-size:14px; color:var(--text-muted); line-height:1.5">Primazia do Espírito, Transição da Noite para o Dia e Culto aos Antepassados.</div>
+                        <div class="topic-card__title" style="font-size:22px; margin-bottom:8px">
+                            <span class="lang-pt">Mundo Espiritual</span>
+                            <span class="lang-ja" style="display:none">霊界編</span>
+                        </div>
+                        <div style="font-size:14px; color:var(--text-muted); line-height:1.5">
+                            <span class="lang-pt">Ensinamentos sobre o mundo espiritual e princípios fundamentais.</span>
+                            <span class="lang-ja" style="display:none">霊界と根本義に関する御教え集。</span>
+                        </div>
                     </a>
-                    <a href="../shumeic2/index.html" class="topic-card" style="flex-direction:column; align-items:flex-start; height:100%; padding: 32px;">
+                    <a href="shumeic2/index.html" class="topic-card" style="flex-direction:column; align-items:flex-start; height:100%; padding: 32px;">
                         <span class="section-label" style="text-align:left; margin-bottom:12px;">Volume 2</span>
-                        <div class="topic-card__title" style="font-size:22px; margin-bottom:8px">Johrei</div>
-                        <div style="font-size:14px; color:var(--text-muted); line-height:1.5">Método de Saúde Divino e Agricultura Natural (Salvação pelo Belo e pelo Alimento).</div>
+                        <div class="topic-card__title" style="font-size:22px; margin-bottom:8px">
+                            <span class="lang-pt">Método Divino de Saúde</span>
+                            <span class="lang-ja" style="display:none">浄霊・自然農法</span>
+                        </div>
+                        <div style="font-size:14px; color:var(--text-muted); line-height:1.5">
+                            <span class="lang-pt">Método Divino de Saúde e Agricultura Natural em harmonia com a natureza.</span>
+                            <span class="lang-ja" style="display:none">浄霊、健康法、自然農法の御教え。</span>
+                        </div>
                     </a>
-                    <a href="../shumeic3/index.html" class="topic-card" style="flex-direction:column; align-items:flex-start; height:100%; padding: 32px;">
+                    <a href="shumeic3/index.html" class="topic-card" style="flex-direction:column; align-items:flex-start; height:100%; padding: 32px;">
                         <span class="section-label" style="text-align:left; margin-bottom:12px;">Volume 3</span>
-                        <div class="topic-card__title" style="font-size:22px; margin-bottom:8px">Seção da Fé</div>
-                        <div style="font-size:14px; color:var(--text-muted); line-height:1.5">A essência da verdadeira fé e o caminho para o paraíso terrestre.</div>
+                        <div class="topic-card__title" style="font-size:22px; margin-bottom:8px">
+                            <span class="lang-pt">A Verdadeira Fé</span>
+                            <span class="lang-ja" style="display:none">信仰編</span>
+                        </div>
+                        <div style="font-size:14px; color:var(--text-muted); line-height:1.5">
+                            <span class="lang-pt">Volume 3 - Ensinamentos sobre a prática e o aprimoramento da fé.</span>
+                            <span class="lang-ja" style="display:none">第三巻：信仰の実践 e 向上に関する御教え集。</span>
+                        </div>
                     </a>
-                    <a href="../shumeic4/index.html" class="topic-card" style="flex-direction:column; align-items:flex-start; height:100%; padding: 32px;">
+                    <a href="shumeic4/index.html" class="topic-card" style="flex-direction:column; align-items:flex-start; height:100%; padding: 32px;">
                         <span class="section-label" style="text-align:left; margin-bottom:12px;">Volume 4</span>
-                        <div class="topic-card__title" style="font-size:22px; margin-bottom:8px">Outros Ensinamentos</div>
-                        <div style="font-size:14px; color:var(--text-muted); line-height:1.5">Coletânea de teses diversas e sermões complementares.</div>
+                        <div class="topic-card__title" style="font-size:22px; margin-bottom:8px">
+                            <span class="lang-pt">Ensinamentos Complementares</span>
+                            <span class="lang-ja" style="display:none">補足編</span>
+                        </div>
+                        <div style="font-size:14px; color:var(--text-muted); line-height:1.5">
+                            <span class="lang-pt">Ensinamentos complementares e temas diversos da obra divina.</span>
+                            <span class="lang-ja" style="display:none">第四巻：補足の御教えと様々なテーマ。</span>
+                        </div>
                     </a>
                 </div>
             </div>
@@ -803,23 +1486,52 @@ def process_indexes():
             main_title = "Índice de Ensinamentos"
             
             if 'shumeic1' in rel_path: 
-                vol_label = "COLETÂNEA OFICIAL • VOLUME 1"
-                main_title = "Mundo Espiritual<br>Espírito Precede a Matéria<br>Transição da Noite para o Dia<br>Culto aos Antepassados"
+                vol_label = "VOLUME 1"
+                main_title = "Mundo Espiritual"
+                main_title_ja = "霊界編"
             elif 'shumeic2' in rel_path: 
-                vol_label = "COLETÂNEA OFICIAL • VOLUME 2"
-                main_title = "Johrei • Método Divino de Saúde • Agricultura Natural"
+                vol_label = "VOLUME 2"
+                main_title = "Método Divino de Saúde ・ Agricultura Natural"
+                main_title_ja = "浄霊・自然農法"
             elif 'shumeic3' in rel_path: 
-                vol_label = "COLETÂNEA OFICIAL • VOLUME 3"
-                main_title = "Seção da Fé"
+                vol_label = "VOLUME 3"
+                main_title = "A Verdadeira Fé"
+                main_title_ja = "信仰編"
             elif 'shumeic4' in rel_path: 
-                vol_label = "COLETÂNEA OFICIAL • VOLUME 4"
-                main_title = "Outros Ensinamentos"
+                vol_label = "VOLUME 4"
+                main_title = "Ensinamentos Complementares"
+                main_title_ja = "補足編"
             
-            main_elements_html = traverse_and_convert(main_content)
+            # Load bilingual data to get Japanese titles for the index cards
+            data_file = f"{vol_id}_data_bilingual.json"
+            data_path = os.path.join(DATA_DIR, data_file)
+            vol_data_lookup = {}
+            theme_lookup = {}
+            if os.path.exists(data_path):
+                with open(data_path, 'r', encoding='utf-8') as f:
+                    v_data = json.load(f)
+                    for theme in v_data.get('themes', []):
+                        pt_t = theme.get('theme_title_pt', theme.get('theme_title', ''))
+                        ja_t = theme.get('theme_title', '')
+                        theme_lookup[pt_t] = ja_t
+                        theme_lookup[pt_t.lower()] = ja_t
+                        
+                        for topic in theme.get('topics', []):
+                            fname = topic.get('source_file', topic.get('filename', '')).split('/')[-1]
+                            if fname:
+                                vol_data_lookup[fname] = {
+                                    'title_ja': topic.get('title', ''),
+                                    'title_pt': topic.get('title_ptbr', topic.get('title_pt', ''))
+                                }
+
+            main_elements_html = traverse_and_convert(main_content, vol_data_lookup, theme_lookup)
             content_html = f"""
             <div class="index-header" style="text-align:center; margin-bottom: 64px;">
                 <span class="section-label" style="color: var(--accent); font-weight: 600; letter-spacing: 2px;">{vol_label}</span>
-                <h1 class="index-title" style="margin-top: 16px; font-size: 2.2rem; line-height: 1.4;">{main_title}</h1>
+                <h1 class="index-title" style="margin-top: 16px; font-size: 2.2rem; line-height: 1.4;">
+                    <span class="lang-pt">{main_title}</span>
+                    <span class="lang-ja" style="display:none">{main_title_ja if 'main_title_ja' in locals() else main_title}</span>
+                </h1>
             </div>
             <div class="topic-list">
                 {main_elements_html}
@@ -833,28 +1545,41 @@ def process_indexes():
   <title>{display_title if 'display_title' in locals() else 'Ensinamentos'} - Biblioteca Sagrada</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="{level_up}css/styles.css">
+  <script src="{level_up}js/toggle.js?v={CACHE_BUSTER}"></script>
+  <script>
+    // Reader handles its own initialization that differs from Home/Index
+    if (!window.location.href.includes('reader.html')) {{
+        document.addEventListener('DOMContentLoaded', () => {{
+            const savedLang = localStorage.getItem('site_lang') || 'pt';
+            if (typeof setLanguage === 'function') setLanguage(savedLang);
+        }});
+    }}
+  </script>
 </head>
 <body>
   <header class="header">
-    <a href="{level_up}shumeic1/index.html" class="header__logo">
+    <a href="{level_up}index.html" class="header__logo">
       <div class="logo-circle">
         <div class="logo-dot"></div>
       </div>
       Biblioteca Sagrada
     </a>
     <div class="header__nav">
-       <a href="{level_up}shumeic1/index.html" data-tooltip="Mundo Espiritual・Espírito Precede a Matéria・Transição da Noite para o Dia・Culto aos Antepassados"><span>Vol 1</span></a>
-       <a href="{level_up}shumeic2/index.html" data-tooltip="Johrei・Método Divino de Saúde・Agricultura Natural"><span>Vol 2</span></a>
-       <a href="{level_up}shumeic3/index.html" data-tooltip="Seção da Fé"><span>Vol 3</span></a>
-       <a href="{level_up}shumeic4/index.html" data-tooltip="Outros Ensinamentos"><span>Vol 4</span></a>
-       {f'''<select class="btn-zen" onchange="location.hash=this.value" style="max-width:250px">
+       <a href="{level_up}index.html" style="font-weight:600; opacity:0.7;"><span>⌂ Início</span></a>
+       <a href="{level_up}index2.html" data-tooltip="Mundo Espiritual・Espírito Precede a Matéria・Transição da Noite para o Dia・Culto aos Antepassados"><span>Vol 1</span></a>
+       <a href="{level_up}shumeic2/index.html" data-tooltip="Método Divino de Saúde・Agricultura Natural"><span>Vol 2</span></a>
+       <a href="{level_up}shumeic3/index.html" data-tooltip="A Verdadeira Fé"><span>Vol 3</span></a>
+       <a href="{level_up}shumeic4/index.html" data-tooltip="Ensinamentos Complementares"><span>Vol 4</span></a>
+        {f'''<select class="btn-zen" onchange="location.hash=this.value" style="max-width:250px">
             <option value="">Navegação por Temas</option>
             {''.join([f'<option value="#{h["id"]}">{h["title"]}</option>' for h in section_headers])}
        </select>''' if section_headers else ''}
     </div>
     <div class="controls">
-       <button class="btn-zen active" id="btn-pt">PT-BR</button>
-       <button class="btn-zen" id="btn-ja">日本語</button>
+       <button class="btn-zen" onclick="openHistory()" title="Histórico de Navegação">🕒</button>
+       <button class="btn-zen" onclick="openSearch()" title="Buscar">🔍</button>
+       <button class="btn-zen active" id="btn-pt" onclick="if(typeof setLanguage === 'function') setLanguage('pt');">PT-BR</button>
+       <button class="btn-zen" id="btn-ja" onclick="{ja_btn_onclick}">日本語</button>
        <button class="btn-zen" onclick="toggleTheme()" title="Mudar Tema">☯</button>
     </div>
   </header>
@@ -865,7 +1590,34 @@ def process_indexes():
         </div>
     </div>
   </main>
-  <script src="{level_up}js/toggle.js"></script>
+
+  <div class="search-modal-overlay" id="searchModal">
+    <div class="search-modal">
+      <div class="search-header">
+        <div class="search-input-row">
+          <input type="text" class="search-input" id="searchInput" placeholder="Buscar nos ensinamentos..." autocomplete="off">
+          <button class="search-close" id="searchClose">&times;</button>
+        </div>
+        <div class="search-filters">
+          <label class="filter-label"><input type="radio" name="searchFilter" value="all" checked> Tudo</label>
+          <label class="filter-label"><input type="radio" name="searchFilter" value="title"> Só Título</label>
+          <label class="filter-label"><input type="radio" name="searchFilter" value="content"> Só Conteúdo</label>
+        </div>
+      </div>
+      <ul class="search-results" id="searchResults"></ul>
+    </div>
+  </div>
+
+  <div class="search-modal-overlay" id="historyModal">
+    <div class="search-modal">
+      <div class="search-header">
+        <h2 style="font-size: 1.2rem; margin:0; color: var(--accent);">Histórico de Navegação</h2>
+        <button class="search-close" onclick="closeHistory()">&times;</button>
+      </div>
+      <ul class="search-results" id="historyResults"></ul>
+    </div>
+  </div>
+
 </body>
 </html>"""
         with open(dest, 'w', encoding='utf-8') as f:
@@ -887,13 +1639,72 @@ def copy_assets():
                     count += 1
     print(f"Copied {count} new image assets to assets/images/")
 
+def build_search_index():
+    """Generates a minimized JSON search index from all translation data."""
+    print("Building global search index...")
+    
+    # Write the GLOBAL_INDEX_TITLES into reader.js so it can use them
+    reader_js_path = os.path.join(OUTPUT_DIR, 'js', 'reader.js')
+    if os.path.exists(reader_js_path):
+        with open(reader_js_path, 'r', encoding='utf-8') as f:
+            reader_js_content = f.read()
+        injection = f"window.GLOBAL_INDEX_TITLES = {json.dumps(GLOBAL_INDEX_TITLES, ensure_ascii=False)};\nwindow.DATA_OUTPUT_DIR = '{DATA_OUTPUT_DIR}';\n"
+        if "window.GLOBAL_INDEX_TITLES =" not in reader_js_content:
+            with open(reader_js_path, 'w', encoding='utf-8') as f:
+                f.write(injection + reader_js_content)
+
+    search_data = []
+    
+    for vol in VOLUMES:
+        vol_id = vol['id']
+        src = os.path.join(DATA_DIR, vol['file'])
+        if not os.path.exists(src): continue
+        
+        with open(src, 'r', encoding='utf-8') as f:
+            try:
+                data = json.load(f)
+            except json.JSONDecodeError:
+                continue
+                
+        for theme in data.get('themes', []):
+            for topic in theme.get('topics', []):
+                # Prefer PT title/content, fallback to original
+                title = topic.get('title_ptbr') or topic.get('title_pt') or topic.get('title', '')
+                content = topic.get('content_ptbr') or topic.get('content_pt') or topic.get('content', '')
+                
+                # Strip HTML from content for a clean search index
+                soup = BeautifulSoup(content, "html.parser")
+                clean_text = soup.get_text(separator=" ", strip=True)
+                
+                if clean_text:
+                    src_file = topic.get('source_file') or topic.get('filename') or ''
+                    filename = os.path.basename(src_file) if src_file else ''
+                    index_title = GLOBAL_INDEX_TITLES.get(vol_id, {}).get(filename, '')
+                    
+                    # Store only essential fields to keep size small
+                    search_data.append({
+                        'v': vol_id,
+                        'f': filename,
+                        't': index_title if index_title else title.strip(),
+                        'c': clean_text
+                    })
+                    
+    index_path = os.path.join(OUTPUT_DIR, DATA_OUTPUT_DIR, 'search_index.json')
+    with open(index_path, 'w', encoding='utf-8') as f:
+        # Saving without indentation to save space
+        json.dump(search_data, f, ensure_ascii=False, separators=(',', ':'))
+    
+    size_mb = os.path.getsize(index_path) / (1024 * 1024)
+    print(f"Search index generated at {index_path} ({size_mb:.2f} MB)")
+
 if __name__ == "__main__":
     create_dirs()
     # Copy data
     for vol in VOLUMES:
         src = os.path.join(DATA_DIR, vol['file'])
         if os.path.exists(src):
-            shutil.copy2(src, f"{OUTPUT_DIR}/data/{vol['file']}")
+            shutil.copy2(src, f"{OUTPUT_DIR}/{DATA_OUTPUT_DIR}/{vol['file']}")
     copy_assets()
     process_indexes()
-    print("Modern Site (Sakura Zen) generated in " + OUTPUT_DIR)
+    build_search_index()
+    print("Modern Site (Biblioteca Sagrada) generated in " + OUTPUT_DIR)
