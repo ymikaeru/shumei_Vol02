@@ -358,8 +358,6 @@ body {
   color: var(--text-main);
   font-weight: 400;
 }
-.topic-content * { color: inherit !important; }
-
 .topic-content b { font-weight: 700; }
 .topic-content p { margin-bottom: 32px; }
 
