@@ -3,26 +3,27 @@
 
 :root {
   /* Color Palette - Sakura Zen (Light) */
-  --bg-color: #F8F9F5;
+  --bg-color: #FBFBFA; /* Slightly cleaner Nordic white */
   --surface: #FFFFFF;
   --surface-rgb: 255, 255, 255;
   --text-main: #1C1C1E;
-  --text-muted: #6E6E73;
-  --accent: #B8860B; /* Muted Zen Gold */
-  --accent-soft: rgba(184, 134, 11, 0.1);
-  --border: #E5E5E0;
-  --shadow-premium: 0 20px 50px rgba(0, 0, 0, 0.05);
-  --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.02);
+  --text-muted: #86868B; /* More Apple-like muted text */
+  --accent: #B8860B; 
+  --accent-soft: rgba(184, 134, 11, 0.08);
+  --border: rgba(0, 0, 0, 0.08); /* More subtle borders */
+  --shadow-premium: 0 30px 60px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0,0,0,0.02);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.04);
   
   /* Typography */
-  --font-ui: 'Outfit', -apple-system, sans-serif;
+  --font-ui: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-serif: 'Crimson Pro', serif;
   
   /* Layout */
   --max-width-content: 720px;
   --container-width: 1040px;
   --nav-height: 80px;
-  --radius: 16px;
+  --radius: 24px; /* Softer iOS corners */
+  --radius-sm: 12px;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -370,32 +371,34 @@ body {
 }
 
 .btn-zen {
-  padding: 8px 16px;
-  border-radius: 24px;
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--accent);
-  cursor: pointer;
-  font-family: var(--font-sans);
-  font-size: 14px;
-  transition: all 0.3s ease;
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  text-align: center;
-  display: flex; /* Added from original, assuming it was intended to be kept */
-  align-items: center; /* Added from original, assuming it was intended to be kept */
-  gap: 8px; /* Added from original, assuming it was intended to be kept */
-}
-.btn-zen:hover, .btn-zen:focus {
-  border-color: var(--accent);
-  background: rgba(184, 134, 11, 0.05);
-}
-.btn-zen option {
-  background: var(--surface);
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  border: none;
   color: var(--text-main);
+  cursor: pointer;
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 500;
+  transition: all 0.25s var(--ease);
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  -webkit-font-smoothing: antialiased;
 }
-.btn-zen.active { background: var(--text-main); color: var(--surface); border-color: var(--text-main); }
+
+.btn-zen:hover {
+  background: var(--accent);
+  color: white;
+  transform: scale(1.02);
+}
+
+.btn-zen.active {
+  background: var(--text-main);
+  color: var(--surface);
+}
 
 /* --- Search Modal UI --- */
 .search-modal-overlay {
@@ -420,30 +423,78 @@ body {
 }
 
 .search-modal {
-  background: var(--surface);
-  width: 100%;
-  max-width: 680px;
+  background: rgba(var(--surface-rgb), 0.82);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  width: calc(100% - 32px);
+  max-width: 600px;
   border-radius: var(--radius);
   box-shadow: var(--shadow-premium);
+  border: 1px solid rgba(255, 255, 255, 0.3);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  max-height: 80vh;
-  transform: translateY(-20px);
-  transition: transform 0.3s var(--ease);
+  max-height: 85vh;
+  transform: scale(0.95);
+  opacity: 0;
+  transition: transform 0.4s var(--ease), opacity 0.4s var(--ease);
+}
+
+[data-theme="dark"] .search-modal {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(30, 30, 35, 0.75);
 }
 
 .search-modal-overlay.active .search-modal {
-  transform: translateY(0);
+  transform: scale(1);
+  opacity: 1;
 }
 
 .search-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid var(--border);
+  padding: 32px 32px 16px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
+
+.search-header h2 {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.panel-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.panel-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.panel-pill {
+  background: var(--border);
+  border-radius: 20px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 
 .search-input-row {
   display: flex;

@@ -485,94 +485,88 @@ function updateCpThemeLabel() {
 function toggleControlPanel() {
     let cp = document.getElementById('controlPanelOverlay');
     if (!cp) {
-        // Build the control panel HTML
         cp = document.createElement('div');
         cp.className = 'search-modal-overlay';
         cp.id = 'controlPanelOverlay';
-        
-        // Find if we are on the reader page (some items only apply to reader)
-        const isReader = window.location.href.includes('reader.html');
-        
-        const currentLang = localStorage.getItem('site_lang') || 'pt';
-        const langLabel = currentLang === 'pt' ? 'PT-BR' : '日本語';
-        
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-        const themeLabel = isDark ? 'Ativado' : 'Desativado';
-        
-        cp.innerHTML = `
-            <style>
-            .cp-item { display:flex; align-items:center; padding:12px 15px; margin-bottom:10px; border-radius:8px; background:var(--bg-card); border:1px solid var(--border-color); cursor:pointer; transition:all 0.2s; }
-            .cp-item:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 4px 12px var(--shadow-color); }
-            .cp-icon { font-size:1.5rem; margin-right:15px; width:30px; text-align:center; }
-            .cp-label { font-size:1rem; color:var(--text-main); flex:1; }
-            .cp-btn { background:var(--bg-body); border:1px solid var(--border-color); color:var(--text-main); padding:6px 14px; border-radius:4px; cursor:pointer; font-size:1rem; margin-left:8px; transition:0.2s;}
-            .cp-btn:hover { background:var(--accent); color:white; border-color:var(--accent); }
-            </style>
-            <div class="search-modal" style="max-width: 400px; text-align: left;">
-                <div class="search-header" style="justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px;">
-                    <h2 style="font-size: 1.2rem; margin:0; color: var(--accent);">Painel de Controle ⚙️</h2>
-                    <button class="search-close" onclick="closeControlPanel()">&times;</button>
-                </div>
-                <div class="drawer-content" style="padding: 10px 0;">
-                    
-                    <div class="cp-item" onclick="toggleLangSwitch()">
-                        <span class="cp-icon">🌐</span>
-                        <span class="cp-label">Idioma: <strong id="cpLangLabel">${langLabel}</strong></span>
-                    </div>
-                    
-                    ${isReader ? `
-                    <div class="cp-item" style="cursor:default;" onclick="event.stopPropagation()">
-                        <span class="cp-icon">📝</span>
-                        <span class="cp-label">Tamanho da Fonte</span>
-                        <div>
-                            <button class="cp-btn" onclick="changeFontSize(-1)">A-</button>
-                            <button class="cp-btn" onclick="changeFontSize(1)">A+</button>
-                        </div>
-                    </div>
-                    ` : ''}
+        document.body.appendChild(cp);
+        cp.onclick = (e) => { if (e.target.id === 'controlPanelOverlay') closeControlPanel(); };
+    }
 
-                    <div class="cp-item" onclick="toggleTheme(); updateCpThemeLabel();">
-                        <span class="cp-icon" id="cpThemeIcon">🌓</span>
-                        <span class="cp-label">Tema Escuro: <strong id="cpThemeLabel">${themeLabel}</strong></span>
-                    </div>
+    const isReader = window.location.href.includes('reader.html');
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const currentLang = localStorage.getItem('site_lang') || 'pt';
 
-                    <div class="cp-item" onclick="openHistory(); closeControlPanel();">
-                        <span class="cp-icon">🕒</span>
-                        <span class="cp-label">Histórico de Leitura</span>
-                    </div>
-                    
-                    <div class="cp-item" onclick="openBookmarks(); closeControlPanel();">
-                        <span class="cp-icon">🔖</span>
-                        <span class="cp-label">Favoritos Salvos</span>
-                    </div>
-
-                    ${isReader ? `
-                    <div class="cp-item" onclick="window.toggleBookmark(); closeControlPanel();">
-                        <span class="cp-icon">☆</span>
-                        <span class="cp-label">Favoritar Ensino Atual</span>
-                    </div>
-
-                    <div class="cp-item" onclick="window.toggleTTS(); closeControlPanel();">
-                        <span class="cp-icon">🎧</span>
-                        <span class="cp-label">Ouvir em Áudio</span>
-                    </div>
-
-                    <div class="cp-item" onclick="window.shareTopic(); closeControlPanel();">
-                        <span class="cp-icon">📤</span>
-                        <span class="cp-label">Compartilhar</span>
-                    </div>
-                    ` : ''}
-
+    cp.innerHTML = `
+        <div class="search-modal" style="max-width: 440px; padding-bottom: 32px;">
+            <div class="search-header">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>Ajustes</h2>
+                    <button class="btn-zen" onclick="closeControlPanel()" style="padding: 0; width: 36px; height: 36px; border-radius: 50%; background: var(--border);">✕</button>
                 </div>
             </div>
-        `;
-        document.body.appendChild(cp);
-        
-        cp.addEventListener('click', (e) => {
-            if (e.target.id === 'controlPanelOverlay') closeControlPanel();
-        });
-    }
-    cp.classList.add('active');
+
+            <div style="padding: 10px 32px; display: flex; flex-direction: column; gap: 32px;">
+                
+                <div class="panel-section">
+                    <div class="panel-row">
+                        <button class="btn-zen" onclick="toggleLangSwitch()" style="height: 56px; background: var(--accent-soft);">
+                            🌐 ${currentLang === 'pt' ? 'Português' : '日本語'}
+                        </button>
+                        <button class="btn-zen" onclick="toggleTheme(); toggleControlPanel();" style="height: 56px;">
+                            ${isDark ? '☀️ Claro' : '🌙 Escuro'}
+                        </button>
+                    </div>
+                </div>
+
+                ${isReader ? `
+                <div class="panel-section">
+                    <p class="panel-label">Leitura</p>
+                    <div class="panel-pill">
+                        <span style="font-size: 0.95rem; font-weight: 500;">Tamanho do texto</span>
+                        <div style="display: flex; gap: 4px;">
+                            <button class="btn-zen" onclick="changeFontSize(-1)" style="background: transparent; width: 44px; height: 44px; font-size: 1.1rem;">A-</button>
+                            <button class="btn-zen" onclick="changeFontSize(1)" style="background: transparent; width: 44px; height: 44px; font-size: 1.1rem;">A+</button>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+
+                <div class="panel-section">
+                    <p class="panel-label">Biblioteca</p>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn-zen" onclick="openHistory(); closeControlPanel();" style="justify-content: flex-start; padding: 16px 20px; background: var(--border); border-radius: 20px;">
+                            <span style="font-size: 1.25rem;">🕒</span> Histórico de leitura
+                        </button>
+                        <button class="btn-zen" onclick="openBookmarks(); closeControlPanel();" style="justify-content: flex-start; padding: 16px 20px; background: var(--border); border-radius: 20px;">
+                            <span style="font-size: 1.25rem;">⭐</span> Meus favoritos
+                        </button>
+                    </div>
+                </div>
+
+                ${isReader ? `
+                <div class="panel-section">
+                    <p class="panel-label">Ferramentas</p>
+                    <div class="panel-row" style="margin-bottom: 4px;">
+                        <button class="btn-zen" onclick="window.toggleTTS(); closeControlPanel();" style="flex-direction: column; padding: 20px; height: auto; gap: 10px; border-radius: 24px; background: var(--border);">
+                            <span style="font-size: 1.6rem;">🔊</span>
+                            <span style="font-size: 0.8rem; font-weight: 600;">Ouvir</span>
+                        </button>
+                        <button class="btn-zen" onclick="window.shareTopic(); closeControlPanel();" style="flex-direction: column; padding: 20px; height: auto; gap: 10px; border-radius: 24px; background: var(--border);">
+                            <span style="font-size: 1.6rem;">📤</span>
+                            <span style="font-size: 0.8rem; font-weight: 600;">Enviar</span>
+                        </button>
+                    </div>
+                    <button class="btn-zen" onclick="window.toggleBookmark(); closeControlPanel();" style="width: 100%; height: 60px; background: var(--accent); color: white; border-radius: 20px; font-weight: 600;">
+                         Salvar nos Favoritos
+                    </button>
+                </div>
+                ` : ''}
+
+            </div>
+        </div>
+    `;
+
+    setTimeout(() => cp.classList.add('active'), 10);
 }
 
 function closeControlPanel() {
