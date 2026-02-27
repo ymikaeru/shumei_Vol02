@@ -358,8 +358,6 @@ body {
   color: var(--text-main);
   font-weight: 400;
 }
-.topic-content * { color: inherit !important; }
-
 .topic-content b { font-weight: 700; }
 .topic-content p { margin-bottom: 32px; }
 
@@ -878,4 +876,46 @@ kbd {
   .nav-arrow__title { font-size: 13px; }
   .keyboard-hint { display: none; }
   .font-size-controls { display: none; }
+}
+
+/* --- Legacy Color Highlights --- */
+/* Mapping from old <font color="X"> */
+.highlight-blue {
+  color: var(--accent); /* Adaptando o azul forte original (#0000ff) para o dourado zen do site moderno */
+  font-weight: 500;
+}
+.highlight-cyan {
+  color: #008b8b; /* Teal suavizado para combinar com o tema */
+  font-weight: 500;
+}
+.highlight-black {
+  color: var(--text-main);
+  font-weight: 600;
+}
+.highlight-custom {
+  color: var(--accent);
+}
+
+[data-theme="dark"] .highlight-blue {
+  color: #D4AF37; /* Dourado mais claro no tema escuro */
+}
+[data-theme="dark"] .highlight-cyan {
+  color: #40E0D0; /* Turquoise mais claro no escuro */
+}
+
+/* Red highlights added */
+.highlight-red-dark {
+  color: #990000; /* Dark red for "Pergunta do fiel", etc */
+  font-weight: 600;
+}
+.highlight-red {
+  color: #cc0000; /* Standard red (original #ff0000) adjusted for better readability */
+  font-weight: 500;
+}
+
+[data-theme="dark"] .highlight-red-dark {
+  color: #ff6b6b; /* Lighter soft red for dark mode readability */
+}
+[data-theme="dark"] .highlight-red {
+  color: #ff8787; /* Even lighter salmon-red for generic red in dark mode */
 }
