@@ -1,0 +1,18 @@
+{
+  "name": "Biblioteca Sagrada",
+  "short_name": "B. Sagrada",
+  "description": "Ensinamentos de Meishu-Sama — Biblioteca Sagrada",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F8F9F5",
+  "theme_color": "#B8860B",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

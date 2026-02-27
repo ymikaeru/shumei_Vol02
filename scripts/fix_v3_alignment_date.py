@@ -87,6 +87,21 @@ def main():
             fname = topic.get('filename')
             ja_date = normalize_ja_date(topic.get('date'))
             
+            # Detect empty/placeholder Japanese headers (e.g., `<font color="#0000ff"...>真理について</font>`)
+            ja_content = topic.get('content', '')
+            is_placeholder_header = (
+                topic.get('date') == 'Unknown' and 
+                '<font color="#0000ff"' in ja_content and 
+                len(ja_content) < 300
+            )
+
+            if is_placeholder_header:
+                topic['title_ptbr'] = ""
+                topic['content_ptbr'] = ""
+                topic['publication_title_ptbr'] = ""
+                matched_topics += 1
+                continue
+            
             key = (fname, ja_date)
             possible = translation_lookup.get(key, [])
             
@@ -106,7 +121,7 @@ def main():
                 topic['publication_title_ptbr'] = ""
                 unmatched_topics.append(f"{topic.get('title')} ({fname}, {topic.get('date')})")
 
-    print(f"Matched {matched_topics} out of {total_topics} topics.")
+    print(f"Matched {matched_topics} out of {total_topics} topics (including skipped placeholders).")
     
     if unmatched_topics:
         print(f"\nUnmatched Topics ({len(unmatched_topics)}):")

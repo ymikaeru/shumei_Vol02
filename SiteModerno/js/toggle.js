@@ -275,3 +275,188 @@ function closeHistory() {
     modal.classList.remove('active');
   }
 }
+
+// --- Mobile Hamburger Menu ---
+document.addEventListener('DOMContentLoaded', () => {
+  const nav = document.querySelector('.header__nav');
+  if (!nav) return;
+
+  // Create hamburger button
+  const hamburger = document.createElement('button');
+  hamburger.className = 'hamburger';
+  hamburger.setAttribute('aria-label', 'Menu');
+  hamburger.innerHTML = '<span></span><span></span><span></span>';
+
+  // Insert before nav in header
+  const header = document.querySelector('.header');
+  if (header) {
+    // Insert between logo and nav
+    const logo = header.querySelector('.header__logo');
+    if (logo && logo.nextSibling) {
+      header.insertBefore(hamburger, logo.nextSibling);
+    }
+  }
+
+  hamburger.addEventListener('click', () => {
+    hamburger.classList.toggle('open');
+    nav.classList.toggle('open');
+  });
+
+  // Close nav when clicking a link
+  nav.querySelectorAll('a').forEach(a => {
+    a.addEventListener('click', () => {
+      hamburger.classList.remove('open');
+      nav.classList.remove('open');
+    });
+  });
+
+  // Close nav when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!header.contains(e.target)) {
+      hamburger.classList.remove('open');
+      nav.classList.remove('open');
+    }
+  });
+});
+
+// --- Back to Top Button ---
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.createElement('button');
+  btn.className = 'back-to-top';
+  btn.setAttribute('aria-label', 'Voltar ao topo');
+  btn.innerHTML = '↑';
+  document.body.appendChild(btn);
+
+  btn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 400) {
+      btn.classList.add('visible');
+    } else {
+      btn.classList.remove('visible');
+    }
+  }, { passive: true });
+});
+
+// --- Reading Progress Bar ---
+document.addEventListener('DOMContentLoaded', () => {
+  // Only show on reader pages (has topic-content)
+  const content = document.querySelector('.topic-content');
+  if (!content) return;
+
+  const bar = document.createElement('div');
+  bar.className = 'reading-progress';
+  document.body.prepend(bar);
+
+  window.addEventListener('scroll', () => {
+    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+    const scrolled = docHeight > 0 ? (window.scrollY / docHeight) * 100 : 0;
+    bar.style.width = Math.min(100, scrolled) + '%';
+  }, { passive: true });
+});
+
+// --- Font Size Controls (reader pages only) ---
+document.addEventListener('DOMContentLoaded', () => {
+  const content = document.querySelector('.topic-content, [class*="topic-content"]');
+  // Will be present after renderContent fires — listen for it
+  let fontSizeAdded = false;
+  const FONT_KEY = 'reader_font_size';
+  const defaultSize = 21;
+  const minSize = 16;
+  const maxSize = 30;
+
+  // Apply saved font size
+  const applyFontSize = (size) => {
+    document.querySelectorAll('.topic-content').forEach(el => {
+      el.style.fontSize = size + 'px';
+    });
+    localStorage.setItem(FONT_KEY, size);
+  };
+
+  const savedSize = parseInt(localStorage.getItem(FONT_KEY)) || defaultSize;
+
+  // Watch for reader content to be injected
+  const observer = new MutationObserver(() => {
+    const contents = document.querySelectorAll('.topic-content');
+    if (contents.length > 0 && !fontSizeAdded) {
+      applyFontSize(savedSize);
+
+      // Add controls to controls bar
+      const controls = document.querySelector('.controls');
+      if (controls) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'font-size-controls';
+        wrapper.setAttribute('title', 'Tamanho do texto');
+
+        const btnMinus = document.createElement('button');
+        btnMinus.textContent = 'A−';
+        btnMinus.setAttribute('aria-label', 'Diminuir texto');
+
+        const btnPlus = document.createElement('button');
+        btnPlus.textContent = 'A+';
+        btnPlus.setAttribute('aria-label', 'Aumentar texto');
+
+        let currentSize = savedSize;
+        btnMinus.onclick = () => { currentSize = Math.max(minSize, currentSize - 1); applyFontSize(currentSize); };
+        btnPlus.onclick = () => { currentSize = Math.min(maxSize, currentSize + 1); applyFontSize(currentSize); };
+
+        wrapper.appendChild(btnMinus);
+        wrapper.appendChild(btnPlus);
+        // Insert before the theme toggle button (last btn)
+        controls.insertBefore(wrapper, controls.lastElementChild);
+        fontSizeAdded = true;
+      }
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+});
+
+// --- Header Auto-Hide on Scroll ---
+document.addEventListener('DOMContentLoaded', () => {
+  const header = document.querySelector('.header');
+  if (!header) return;
+
+  let lastScrollY = 0;
+  let ticking = false;
+
+  const handleScroll = () => {
+    const currentY = window.scrollY;
+    if (currentY > lastScrollY && currentY > 120) {
+      header.classList.add('header--hidden');
+    } else {
+      header.classList.remove('header--hidden');
+    }
+    lastScrollY = currentY;
+    ticking = false;
+  };
+
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(handleScroll);
+      ticking = true;
+    }
+  }, { passive: true });
+});
+
+// --- Keyboard Navigation Hint (reader) ---
+document.addEventListener('DOMContentLoaded', () => {
+  // Only on reader page
+  if (!window.location.href.includes('reader.html')) return;
+
+  const hint = document.createElement('div');
+  hint.className = 'keyboard-hint';
+  hint.innerHTML = '<kbd>←</kbd> anterior &nbsp; próximo <kbd>→</kbd>';
+  document.body.appendChild(hint);
+
+  // Show hint after first scroll
+  let hintShown = false;
+  window.addEventListener('scroll', () => {
+    if (!hintShown && window.scrollY > 200) {
+      hint.classList.add('visible');
+      hintShown = true;
+      setTimeout(() => hint.classList.remove('visible'), 3000);
+    }
+  }, { passive: true, once: false });
+});

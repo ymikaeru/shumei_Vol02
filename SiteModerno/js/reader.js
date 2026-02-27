@@ -19,12 +19,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         const json = await response.json();
         let topicsFound = [];
 
-        // Flatten all unique files for navigation
+        // Flatten all unique files for navigation, build title & theme lookup
         const allFiles = [];
+        const fileTitleMap = {}; // filename -> pt title
+        const fileThemeMap = {}; // filename -> theme label
         json.themes.forEach(theme => {
+            const themeLabel = theme.name_pt || theme.name || '';
             theme.topics.forEach(topic => {
                 const f = topic.source_file || topic.filename || "";
-                if (f && !allFiles.includes(f)) allFiles.push(f);
+                if (f && !allFiles.includes(f)) {
+                    allFiles.push(f);
+                    // store title for nav labels
+                    const idxTitle = (window.GLOBAL_INDEX_TITLES?.[volId])?.[f];
+                    fileTitleMap[f] = idxTitle || topic.title_ptbr || topic.title_pt || topic.title || f;
+                    fileThemeMap[f] = themeLabel;
+                }
             });
         });
 
@@ -85,11 +94,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
+            // --- Dynamic document.title ---
+            const cleanTitle = mainTitleToDisplay.replace(/<[^>]+>/g, '').trim();
+            document.title = `${cleanTitle} — Biblioteca Sagrada`;
+
             // --- History Saving Logic ---
             try {
                 const history = JSON.parse(localStorage.getItem('readHistory') || '[]');
                 const newEntry = {
-                    title: mainTitleToDisplay.replace(/<br\s*\/?>/gi, ' '),
+                    title: cleanTitle,
                     vol: volId,
                     file: filename,
                     time: Date.now()
@@ -99,9 +112,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 localStorage.setItem('readHistory', JSON.stringify(filtered.slice(0, 20)));
             } catch (e) {}
 
+            // --- Reading time estimate ---
+            const allText = currentTopics.map(t => {
+                const raw = isPt ? (t.content_ptbr || t.content_pt || t.content || '') : (t.content || '');
+                return raw.replace(/<[^>]+>/g, ' ');
+            }).join(' ');
+            const wordCount = allText.trim().split(/\s+/).filter(Boolean).length;
+            const readMins = Math.max(1, Math.round(wordCount / 200));
+            const readTimeLabel = readMins === 1 ? '~1 min de leitura' : `~${readMins} min de leitura`;
+
             let fullHtml = `
                 <div class="topic-header" style="margin-bottom: 40px; text-align: center;">
                     <h1 class="topic-title-large" style="font-size: 2.2rem; margin-bottom: 16px;">${mainTitleToDisplay}</h1>
+                    <div class="read-time-badge">⏱ ${readTimeLabel}</div>
                 </div>
             `;
 
@@ -227,27 +250,44 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Show select only if multiple topics (use already-declared outer variable)
             if (navSelect) navSelect.style.display = currentTopics.length > 1 ? 'inline-block' : 'none';
 
-            // Navigation Footer
+            // Navigation Footer with titles
+            const prevTitle = prevFile ? (fileTitleMap[prevFile] || '←') : null;
+            const nextTitle = nextFile ? (fileTitleMap[nextFile] || '→') : null;
+            const truncate = (s, n) => s && s.length > n ? s.slice(0, n) + '…' : s;
+
             const navFooter = `
-                <div class="reader-nav-footer" style="display: flex; justify-content: space-between; margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--border);">
-                    ${prevFile ? `<a href="?vol=${volId}&file=${prevFile}" class="btn-zen" style="text-decoration:none">← Anterior</a>` : '<span></span>'}
-                    ${nextFile ? `<a href="?vol=${volId}&file=${nextFile}" class="btn-zen" style="text-decoration:none">Próximo →</a>` : '<span></span>'}
+                <div class="reader-nav-footer">
+                    ${prevFile ? `<a href="?vol=${volId}&file=${prevFile}" class="nav-arrow nav-arrow--prev" title="${prevTitle}">
+                        <span class="nav-arrow__label">← Anterior</span>
+                        <span class="nav-arrow__title">${truncate(prevTitle, 50)}</span>
+                    </a>` : '<span></span>'}
+                    ${nextFile ? `<a href="?vol=${volId}&file=${nextFile}" class="nav-arrow nav-arrow--next" title="${nextTitle}">
+                        <span class="nav-arrow__label">Próximo →</span>
+                        <span class="nav-arrow__title">${truncate(nextTitle, 50)}</span>
+                    </a>` : '<span></span>'}
                 </div>
             `;
 
             const volPath = volId === 'shumeic1' ? 'index2.html' : `${volId}/index.html`;
+            const currentTheme = fileThemeMap[filename] || '';
 
             container.innerHTML = `
                 <nav class="breadcrumbs">
                     <a href="index.html">Início</a> <span>/</span> 
                     <a href="${volPath}">Volume ${volId.slice(-1)}</a> <span>/</span>
-                    <span style="color:var(--text-main)">Leitura</span>
+                    ${currentTheme ? `<a href="${volPath}" style="color:var(--accent)">${currentTheme}</a> <span>/</span>` : ''}
+                    <span style="color:var(--text-main)">${truncate(cleanTitle, 40)}</span>
                 </nav>
-                <div class="reader-container">
+                <div class="reader-container" id="reader-fade">
                     ${fullHtml}
                     ${navFooter}
                 </div>
             `;
+            // Fade-in animation
+            requestAnimationFrame(() => {
+                const fade = document.getElementById('reader-fade');
+                if (fade) { fade.style.opacity = '0'; requestAnimationFrame(() => { fade.style.transition = 'opacity 0.4s ease'; fade.style.opacity = '1'; }); }
+            });
             
             if (searchQuery) {
                 const q = searchQuery.toLowerCase();
@@ -291,6 +331,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const savedLang = localStorage.getItem('site_lang') || 'pt';
         renderContent(savedLang);
+
+        // --- Keyboard Navigation (← →) ---
+        document.addEventListener('keydown', (e) => {
+            // Don't intercept if user is typing in search or other inputs
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+            if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
+
+            if (e.key === 'ArrowLeft' && prevFile) {
+                window.location.href = `?vol=${volId}&file=${prevFile}`;
+            } else if (e.key === 'ArrowRight' && nextFile) {
+                window.location.href = `?vol=${volId}&file=${nextFile}`;
+            }
+        });
 
     } catch (err) {
         container.innerHTML = `<div class="error">Erro ao carregar o ensinamento.</div>`;
