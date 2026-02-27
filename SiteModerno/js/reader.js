@@ -49,15 +49,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             drawer.className = 'search-modal';
             drawer.style.maxWidth = '600px';
             drawer.innerHTML = `
-                <div class="search-header" style="justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px;">
-                    <h2 style="font-size: 1.2rem; margin:0; color: var(--accent);">Índice - Vol ${volId.slice(-1)}</h2>
+                <div class="search-header">
+                    <h2>Índice — Vol ${volId.slice(-1)}</h2>
                     <button class="search-close" onclick="toggleIndexDrawer()">&times;</button>
                 </div>
-                <div class="drawer-content" style="overflow-y: auto; height: calc(100% - 60px); padding-right: 10px;">
+                <div class="drawer-content" style="overflow-y: auto; height: calc(100% - 80px); padding: 0 24px 32px;">
                     ${json.themes.map(theme => `
-                        <div style="margin-bottom: 25px;">
-                            <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom:5px;">${theme.name_pt || theme.name || 'Ensinamentos'}</h3>
-                            <ul style="list-style:none; padding:0; margin:0;">
+                        <div class="drawer-section">
+                            <h3 class="drawer-section-title">${theme.name_pt || theme.name || 'Ensinamentos'}</h3>
+                            <div class="drawer-list">
                                 ${(() => {
                                     const uniqueMap = {};
                                     theme.topics.forEach(t => {
@@ -68,13 +68,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         const f = t.source_file || t.filename || "";
                                         const title = fileTitleMap[f] || f;
                                         const isActive = f === filename;
-                                        const activeStyle = isActive ? 'font-weight:bold; color:var(--accent);' : 'color:var(--text-main);';
-                                        return `<li style="margin-bottom:10px; line-height:1.4;">
-                                            ${isActive ? '👉 ' : ''}<a href="?vol=${volId}&file=${f}" style="text-decoration:none; ${activeStyle} transition:color 0.2s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='${isActive ? 'var(--accent)' : 'var(--text-main)'}'">${title}</a>
-                                        </li>`;
+                                        return `<a href="?vol=${volId}&file=${f}" class="drawer-item ${isActive ? 'active' : ''}">
+                                            ${isActive ? '<span>📖</span>' : '<span>📄</span>'}
+                                            ${title}
+                                        </a>`;
                                     }).join('');
                                 })()}
-                            </ul>
+                            </div>
                         </div>
                     `).join('')}
                 </div>

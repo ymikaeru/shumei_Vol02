@@ -510,7 +510,7 @@ function toggleControlPanel() {
                 <div class="panel-section">
                     <div class="panel-row">
                         <button class="btn-zen" onclick="toggleLangSwitch()" style="height: 56px; background: var(--accent-soft);">
-                            🌐 ${currentLang === 'pt' ? 'Português' : '日本語'}
+                            🌐 ${currentLang === 'pt' ? '日本語' : 'Português'}
                         </button>
                         <button class="btn-zen" onclick="toggleTheme(); toggleControlPanel();" style="height: 56px;">
                             ${isDark ? '☀️ Claro' : '🌙 Escuro'}
