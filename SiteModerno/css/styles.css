@@ -879,3 +879,28 @@ kbd {
   .keyboard-hint { display: none; }
   .font-size-controls { display: none; }
 }
+
+/* --- Legacy Color Highlights --- */
+/* Mapping from old <font color="X"> */
+.highlight-blue {
+  color: var(--accent); /* Adaptando o azul forte original (#0000ff) para o dourado zen do site moderno */
+  font-weight: 500;
+}
+.highlight-cyan {
+  color: #008b8b; /* Teal suavizado para combinar com o tema */
+  font-weight: 500;
+}
+.highlight-black {
+  color: var(--text-main);
+  font-weight: 600;
+}
+.highlight-custom {
+  color: var(--accent);
+}
+
+[data-theme="dark"] .highlight-blue {
+  color: #D4AF37; /* Dourado mais claro no tema escuro */
+}
+[data-theme="dark"] .highlight-cyan {
+  color: #40E0D0; /* Turquoise mais claro no escuro */
+}

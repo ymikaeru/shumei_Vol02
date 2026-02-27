@@ -151,10 +151,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     formattedContent = marked.parse(rawContent);
                 }
 
-                // Strip all <font> inline-style attributes except color
-                formattedContent = formattedContent.replace(/<font(\s[^>]*)>/gi, (m, attrs) => {
-                    return '<span>';
+                // Convert <font color="..."> to spans with CSS classes
+                formattedContent = formattedContent.replace(/<font\s+color=["']?([^"'>\s]+)["']?[^>]*>/gi, (match, color) => {
+                    let className = 'highlight-text';
+                    let c = color.toLowerCase();
+                    if (c === '#0000ff' || c === 'blue') className = 'highlight-blue';
+                    else if (c === '#00cccc') className = 'highlight-cyan';
+                    else if (c === '#000000' || c === 'black') className = 'highlight-black';
+                    else className = 'highlight-custom'; // Fallback
+                    
+                    return `<span class="${className}">`;
                 }).replace(/<\/font>/gi, '</span>');
+
+                // Strip remaining <font> tags but keep their content
+                formattedContent = formattedContent.replace(/<font[^>]*>/gi, '<span>');
 
                 formattedContent = formattedContent.replace(/\\n\\n/g, '</p><p>');
 
