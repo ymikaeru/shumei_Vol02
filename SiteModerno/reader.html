@@ -4,8 +4,6 @@
   <meta charset="UTF-8">
   <title>Ensinamentos de Meishu-Sama - Leitura</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="manifest" href="../../manifest.json">
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
@@ -28,9 +26,15 @@
        </select>
     </div>
     <div class="controls">
-      <button class="btn-zen" id="btn-index" onclick="toggleIndexDrawer()" title="Índice do Volume">📚</button>
+      <button class="btn-zen" onclick="if(typeof toggleIndexDrawer === 'function') toggleIndexDrawer()" title="Índice do Volume">📋</button>
+      <button class="btn-zen" id="btn-bookmark" onclick="if(typeof toggleBookmark === 'function') toggleBookmark()" title="Favoritar">☆</button>
+      <button class="btn-zen" id="btn-tts" onclick="if(typeof toggleTTS === 'function') toggleTTS()" title="Leitura em Áudio">🔊</button>
+      <button class="btn-zen" id="btn-share" onclick="if(typeof shareTopic === 'function') shareTopic()" title="Compartilhar">🔗</button>
+      <button class="btn-zen" onclick="openHistory()" title="Histórico de Navegação">🕒</button>
       <button class="btn-zen" onclick="openSearch()" title="Buscar">🔍</button>
-      <button class="btn-zen" onclick="toggleControlPanel()" title="Painel de Controle">⚙️</button>
+      <button class="btn-zen active" id="btn-pt" onclick="if(typeof setLanguage === 'function') setLanguage('pt'); else { location.href='../index.html'; }">PT-BR</button>
+      <button class="btn-zen" id="btn-ja" onclick="if(typeof setLanguage === 'function') setLanguage('ja'); else { location.href='../index2.html'; }">日本語</button>
+      <button class="btn-zen" onclick="toggleTheme()" title="Mudar Tema">☯</button>
     </div>
   </header>
   <main class="main">
@@ -113,7 +117,7 @@
     </div>
   </div>
 
-  <script src="js/toggle.js?v=1772160138"></script>
-  <script src="js/reader.js?v=1772160138"></script>
+  <script src="js/toggle.js?v=1772207050"></script>
+  <script src="js/reader.js?v=1772207050"></script>
 </body>
 </html>
