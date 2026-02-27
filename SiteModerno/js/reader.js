@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 // Convert <font color="..."> to spans with CSS classes
-                formattedContent = formattedContent.replace(/<font\s+color=["']?([^"'>\s]+)["']?[^>]*>/gi, (match, color) => {
+                formattedContent = formattedContent.replace(/<font\b[^>]*?\bcolor=["']?([^"'>\s]+)["']?[^>]*>/gi, (match, color) => {
                     let className = 'highlight-text';
                     let c = color.toLowerCase();
                     if (c === '#0000ff' || c === 'blue') className = 'highlight-blue';
