@@ -236,19 +236,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.id === 'historyModal') closeHistory();
   });
 
-  // Dynamically add Bookmarks Modal and Button to all pages
-  const controlsDiv = document.querySelector('.controls');
-  if (controlsDiv && !document.getElementById('btn-bookmarks-list')) {
-      const btn = document.createElement('button');
-      btn.className = 'btn-zen';
-      btn.id = 'btn-bookmarks-list';
-      btn.title = 'Meus Favoritos';
-      btn.innerHTML = '⭐';
-      btn.onclick = openBookmarks;
-      // Insert right before history (first or second position)
-      controlsDiv.insertBefore(btn, controlsDiv.firstChild);
-  }
-
   // Create Bookmarks Modal if it doesn't exist
   if (!document.getElementById('bookmarksModal')) {
       const bModal = document.createElement('div');
@@ -447,61 +434,151 @@ document.addEventListener('DOMContentLoaded', () => {
   }, { passive: true });
 });
 
-// --- Font Size Controls (reader pages only) ---
-document.addEventListener('DOMContentLoaded', () => {
-  const content = document.querySelector('.topic-content, [class*="topic-content"]');
-  // Will be present after renderContent fires — listen for it
-  let fontSizeAdded = false;
-  const FONT_KEY = 'reader_font_size';
-  const defaultSize = 21;
-  const minSize = 16;
-  const maxSize = 30;
+// --- Control Panel & Global Settings ---
+let readerFontSize = parseInt(localStorage.getItem('reader_font_size')) || 21;
 
-  // Apply saved font size
-  const applyFontSize = (size) => {
-    document.querySelectorAll('.topic-content').forEach(el => {
-      el.style.fontSize = size + 'px';
-    });
-    localStorage.setItem(FONT_KEY, size);
-  };
-
-  const savedSize = parseInt(localStorage.getItem(FONT_KEY)) || defaultSize;
-
-  // Watch for reader content to be injected
-  const observer = new MutationObserver(() => {
+// Watch for reader content to be injected to apply font size
+const fontObserver = new MutationObserver(() => {
     const contents = document.querySelectorAll('.topic-content');
-    if (contents.length > 0 && !fontSizeAdded) {
-      applyFontSize(savedSize);
-
-      // Add controls to controls bar
-      const controls = document.querySelector('.controls');
-      if (controls) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'font-size-controls';
-        wrapper.setAttribute('title', 'Tamanho do texto');
-
-        const btnMinus = document.createElement('button');
-        btnMinus.textContent = 'A−';
-        btnMinus.setAttribute('aria-label', 'Diminuir texto');
-
-        const btnPlus = document.createElement('button');
-        btnPlus.textContent = 'A+';
-        btnPlus.setAttribute('aria-label', 'Aumentar texto');
-
-        let currentSize = savedSize;
-        btnMinus.onclick = () => { currentSize = Math.max(minSize, currentSize - 1); applyFontSize(currentSize); };
-        btnPlus.onclick = () => { currentSize = Math.min(maxSize, currentSize + 1); applyFontSize(currentSize); };
-
-        wrapper.appendChild(btnMinus);
-        wrapper.appendChild(btnPlus);
-        // Insert before the theme toggle button (last btn)
-        controls.insertBefore(wrapper, controls.lastElementChild);
-        fontSizeAdded = true;
-      }
+    if (contents.length > 0) {
+        contents.forEach(el => { el.style.fontSize = readerFontSize + 'px'; });
     }
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
 });
+fontObserver.observe(document.body, { childList: true, subtree: true });
+
+function changeFontSize(dir) {
+    readerFontSize = Math.max(16, Math.min(30, readerFontSize + dir));
+    document.querySelectorAll('.topic-content').forEach(el => {
+      el.style.fontSize = readerFontSize + 'px';
+    });
+    localStorage.setItem('reader_font_size', readerFontSize);
+}
+
+function toggleLangSwitch() {
+    const currentLang = localStorage.getItem('site_lang') || 'pt';
+    const newLang = currentLang === 'pt' ? 'ja' : 'pt';
+    
+    // update label immediately before reload
+    const label = document.getElementById('cpLangLabel');
+    if (label) label.textContent = newLang === 'pt' ? 'PT-BR' : '日本語';
+    
+    if (typeof setLanguage === 'function') {
+        const url = window.location.href;
+        if (!url.includes('reader.html') && newLang === 'ja') {
+            window.location.href = 'index2.html';
+        } else if (!url.includes('reader.html') && newLang === 'pt') {
+            window.location.href = 'index.html';
+        } else {
+             setLanguage(newLang, true);
+        }
+    }
+}
+
+function updateCpThemeLabel() {
+    const label = document.getElementById('cpThemeLabel');
+    const icon = document.getElementById('cpThemeIcon');
+    if (!label) return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    label.textContent = isDark ? 'Ativado' : 'Desativado';
+}
+
+function toggleControlPanel() {
+    let cp = document.getElementById('controlPanelOverlay');
+    if (!cp) {
+        // Build the control panel HTML
+        cp = document.createElement('div');
+        cp.className = 'search-modal-overlay';
+        cp.id = 'controlPanelOverlay';
+        
+        // Find if we are on the reader page (some items only apply to reader)
+        const isReader = window.location.href.includes('reader.html');
+        
+        const currentLang = localStorage.getItem('site_lang') || 'pt';
+        const langLabel = currentLang === 'pt' ? 'PT-BR' : '日本語';
+        
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const themeLabel = isDark ? 'Ativado' : 'Desativado';
+        
+        cp.innerHTML = `
+            <style>
+            .cp-item { display:flex; align-items:center; padding:12px 15px; margin-bottom:10px; border-radius:8px; background:var(--bg-card); border:1px solid var(--border-color); cursor:pointer; transition:all 0.2s; }
+            .cp-item:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:0 4px 12px var(--shadow-color); }
+            .cp-icon { font-size:1.5rem; margin-right:15px; width:30px; text-align:center; }
+            .cp-label { font-size:1rem; color:var(--text-main); flex:1; }
+            .cp-btn { background:var(--bg-body); border:1px solid var(--border-color); color:var(--text-main); padding:6px 14px; border-radius:4px; cursor:pointer; font-size:1rem; margin-left:8px; transition:0.2s;}
+            .cp-btn:hover { background:var(--accent); color:white; border-color:var(--accent); }
+            </style>
+            <div class="search-modal" style="max-width: 400px; text-align: left;">
+                <div class="search-header" style="justify-content: space-between; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 15px;">
+                    <h2 style="font-size: 1.2rem; margin:0; color: var(--accent);">Painel de Controle ⚙️</h2>
+                    <button class="search-close" onclick="closeControlPanel()">&times;</button>
+                </div>
+                <div class="drawer-content" style="padding: 10px 0;">
+                    
+                    <div class="cp-item" onclick="toggleLangSwitch()">
+                        <span class="cp-icon">🌐</span>
+                        <span class="cp-label">Idioma: <strong id="cpLangLabel">${langLabel}</strong></span>
+                    </div>
+                    
+                    ${isReader ? `
+                    <div class="cp-item" style="cursor:default;" onclick="event.stopPropagation()">
+                        <span class="cp-icon">📝</span>
+                        <span class="cp-label">Tamanho da Fonte</span>
+                        <div>
+                            <button class="cp-btn" onclick="changeFontSize(-1)">A-</button>
+                            <button class="cp-btn" onclick="changeFontSize(1)">A+</button>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div class="cp-item" onclick="toggleTheme(); updateCpThemeLabel();">
+                        <span class="cp-icon" id="cpThemeIcon">🌓</span>
+                        <span class="cp-label">Tema Escuro: <strong id="cpThemeLabel">${themeLabel}</strong></span>
+                    </div>
+
+                    <div class="cp-item" onclick="openHistory(); closeControlPanel();">
+                        <span class="cp-icon">🕒</span>
+                        <span class="cp-label">Histórico de Leitura</span>
+                    </div>
+                    
+                    <div class="cp-item" onclick="openBookmarks(); closeControlPanel();">
+                        <span class="cp-icon">🔖</span>
+                        <span class="cp-label">Favoritos Salvos</span>
+                    </div>
+
+                    ${isReader ? `
+                    <div class="cp-item" onclick="window.toggleBookmark(); closeControlPanel();">
+                        <span class="cp-icon">☆</span>
+                        <span class="cp-label">Favoritar Ensino Atual</span>
+                    </div>
+
+                    <div class="cp-item" onclick="window.toggleTTS(); closeControlPanel();">
+                        <span class="cp-icon">🎧</span>
+                        <span class="cp-label">Ouvir em Áudio</span>
+                    </div>
+
+                    <div class="cp-item" onclick="window.shareTopic(); closeControlPanel();">
+                        <span class="cp-icon">📤</span>
+                        <span class="cp-label">Compartilhar</span>
+                    </div>
+                    ` : ''}
+
+                </div>
+            </div>
+        `;
+        document.body.appendChild(cp);
+        
+        cp.addEventListener('click', (e) => {
+            if (e.target.id === 'controlPanelOverlay') closeControlPanel();
+        });
+    }
+    cp.classList.add('active');
+}
+
+function closeControlPanel() {
+    const cp = document.getElementById('controlPanelOverlay');
+    if (cp) cp.classList.remove('active');
+}
 
 // --- Header Auto-Hide on Scroll ---
 document.addEventListener('DOMContentLoaded', () => {
