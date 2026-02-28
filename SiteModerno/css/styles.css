@@ -1025,9 +1025,9 @@ select[data-tooltip]::after {
 }
 
 /* ============================================================
-   BREAKPOINT: ≤ 768px
+   BREAKPOINT: ≤ 1024px (Mobile & Tablet)
    ============================================================ */
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
 
   /* --- Header --- */
   .header {
