@@ -6,8 +6,146 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Global Language Logic
   const savedLang = localStorage.getItem('site_lang') || 'pt';
-  setLanguage(savedLang, false); // Initialize without re-rendering if on reader (reader handles its own init)
+  setLanguage(savedLang, false);
+
+  // -------------------------------------------------------
+  // Mobile Hamburger Menu — injected dynamically
+  // -------------------------------------------------------
+  _initMobileNav();
 });
+
+function _initMobileNav() {
+  const header = document.querySelector('.header');
+  if (!header) return;
+
+  // --- 1. Inject hamburger button into header ---
+  const hamburgerBtn = document.createElement('button');
+  hamburgerBtn.className = 'mobile-menu-btn';
+  hamburgerBtn.setAttribute('aria-label', 'Menu de navegação');
+  hamburgerBtn.innerHTML = `
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="3" y1="6" x2="21" y2="6"/>
+      <line x1="3" y1="12" x2="21" y2="12"/>
+      <line x1="3" y1="18" x2="21" y2="18"/>
+    </svg>`;
+  header.appendChild(hamburgerBtn);
+
+  // --- 2. Build nav links from existing desktop nav ---
+  const desktopNav = header.querySelector('.header__nav');
+  const navLinks = desktopNav ? Array.from(desktopNav.querySelectorAll('a')) : [];
+
+  // Check if there's a topic select (index pages)
+  const topicSelect = desktopNav ? desktopNav.querySelector('select') : null;
+  const topicOptions = topicSelect
+    ? Array.from(topicSelect.options).filter(o => o.value)
+    : [];
+
+  // Collect action buttons from desktop controls
+  const basePath = window.location.pathname.includes('/shumeic') ? '../' : './';
+  const isReader = window.location.pathname.includes('reader.html');
+
+  // --- 3. Build the mobile nav overlay HTML ---
+  let linksHtml = navLinks.map(a => {
+    const icon = a.href.includes('index.html') && a.textContent.trim().startsWith('⌂')
+      ? `<svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`
+      : `<svg class="nav-icon" viewBox="0 0 24 24"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>`;
+    return `<a href="${a.href}" class="mobile-nav-link">${icon}${a.textContent.trim()}</a>`;
+  }).join('');
+
+  let topicsHtml = '';
+  if (topicOptions.length > 0) {
+    topicsHtml = `
+      <div class="mobile-nav-divider"></div>
+      <div class="mobile-nav-section-label">Temas do Volume</div>
+      ${topicOptions.map(o => `<a href="${o.value}" class="mobile-nav-link">
+        <svg class="nav-icon" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        ${o.text}
+      </a>`).join('')}`;
+  }
+
+  const currentLang = localStorage.getItem('site_lang') || 'pt';
+
+  const mobileNavOverlay = document.createElement('div');
+  mobileNavOverlay.className = 'mobile-nav-overlay';
+  mobileNavOverlay.id = 'mobileNavOverlay';
+  mobileNavOverlay.innerHTML = `
+    <div class="mobile-nav-backdrop" id="mobileNavBackdrop"></div>
+    <div class="mobile-nav-panel">
+      <div class="mobile-nav-header">
+        <span>Biblioteca Sagrada</span>
+        <button class="mobile-nav-close" id="mobileNavClose" aria-label="Fechar menu">✕</button>
+      </div>
+      <div class="mobile-nav-body">
+
+        <div class="mobile-nav-section-label">Navegação</div>
+        ${linksHtml}
+        ${topicsHtml}
+
+        <div class="mobile-nav-divider"></div>
+        <div class="mobile-nav-section-label">Idioma</div>
+        <div class="mobile-lang-row">
+          <button class="mobile-lang-btn${currentLang === 'pt' ? ' active' : ''}" id="mobileLangPt"
+            onclick="_mobileSwitchLang('pt')">PT-BR</button>
+          <button class="mobile-lang-btn${currentLang === 'ja' ? ' active' : ''}" id="mobileLangJa"
+            onclick="_mobileSwitchLang('ja')">日本語</button>
+        </div>
+
+        <div class="mobile-nav-divider"></div>
+        <div class="mobile-nav-section-label">Ações</div>
+        <button class="mobile-nav-link" onclick="openSearch(); closeMobileNav();">
+          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          Buscar
+        </button>
+        <button class="mobile-nav-link" onclick="openHistory(); closeMobileNav();">
+          <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Histórico
+        </button>
+        <button class="mobile-nav-link" onclick="openBookmarksList(); closeMobileNav();">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          Favoritos
+        </button>
+        <button class="mobile-nav-link" onclick="toggleTheme(); closeMobileNav();">
+          <svg class="nav-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          Mudar Tema
+        </button>
+      </div>
+    </div>`;
+
+  document.body.appendChild(mobileNavOverlay);
+
+  // --- 4. Event listeners ---
+  hamburgerBtn.addEventListener('click', openMobileNav);
+  document.getElementById('mobileNavClose').addEventListener('click', closeMobileNav);
+  document.getElementById('mobileNavBackdrop').addEventListener('click', closeMobileNav);
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMobileNav();
+  });
+}
+
+window.openMobileNav = function () {
+  const overlay = document.getElementById('mobileNavOverlay');
+  if (overlay) overlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+};
+
+window.closeMobileNav = function () {
+  const overlay = document.getElementById('mobileNavOverlay');
+  if (overlay) overlay.classList.remove('open');
+  document.body.style.overflow = '';
+};
+
+window._mobileSwitchLang = function (lang) {
+  if (typeof setLanguage === 'function') setLanguage(lang);
+  // Update button states in mobile drawer
+  const ptBtn = document.getElementById('mobileLangPt');
+  const jaBtn = document.getElementById('mobileLangJa');
+  if (ptBtn) ptBtn.classList.toggle('active', lang === 'pt');
+  if (jaBtn) jaBtn.classList.toggle('active', lang === 'ja');
+};
+
 
 async function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme');
@@ -18,25 +156,34 @@ async function toggleTheme() {
 
 function setLanguage(lang, triggerRender = true) {
   localStorage.setItem('site_lang', lang);
-  
-  // Update button states
-  document.querySelectorAll('.btn-zen').forEach(b => {
-    if (b.id === 'btn-pt') {
-      lang === 'pt' ? b.classList.add('active') : b.classList.remove('active');
-    } else if (b.id === 'btn-ja') {
-      lang === 'ja' ? b.classList.add('active') : b.classList.remove('active');
+
+  // Update toggle button state
+  const toggleBtn = document.getElementById('lang-toggle');
+  if (toggleBtn) {
+    if (lang === 'pt') {
+      toggleBtn.innerText = '日本語';
+      toggleBtn.title = 'Mudar para Japonês';
+    } else {
+      toggleBtn.innerText = 'PT';
+      toggleBtn.title = 'Mudar para Português';
     }
-  });
+  }
 
   // Toggle visibility of lang-specific elements
   document.querySelectorAll('.lang-pt').forEach(el => el.style.display = (lang === 'pt' ? 'inline' : 'none'));
   document.querySelectorAll('.lang-ja').forEach(el => el.style.display = (lang === 'ja' ? 'inline' : 'none'));
 
-  // Trigger content re-rendering if the function exists (used on the reader page)
+  // Trigger content re-rendering if the function exists
   if (triggerRender && typeof window.renderContent === 'function') {
     window.renderContent(lang);
   }
 }
+
+window.toggleLanguage = function () {
+  const current = localStorage.getItem('site_lang') || 'pt';
+  const next = current === 'pt' ? 'ja' : 'pt';
+  setLanguage(next);
+};
 
 // --- Global Search Logic ---
 let searchIndex = null;
@@ -45,62 +192,57 @@ let searchTimeout = null;
 
 async function getSearchIndex() {
   if (searchIndex) return searchIndex;
-  
   if (isFetchingIndex) {
-    // Wait until it's done fetching
     while (isFetchingIndex) {
       await new Promise(r => setTimeout(r, 100));
     }
     return searchIndex;
   }
-  
+
   isFetchingIndex = true;
-  document.getElementById('searchResults').innerHTML = '<li class="search-loading">Carregando índice de pesquisa (isso pode levar alguns instantes na primeira vez)...</li>';
-  
-  // Determine relative path to data folder based on current URL
-  const basePath = window.location.href.includes('/shumeic') ? '../' : './';
-  
+  const resultsEl = document.getElementById('searchResults');
+  if (resultsEl) resultsEl.innerHTML = '<li class="search-loading">Carregando índice de pesquisa...</li>';
+
+  const basePath = window.location.pathname.includes('/shumeic') ? '../' : './';
+
   try {
-    const response = await fetch(`${basePath}Data/search_index.json`);
+    const response = await fetch(`${basePath}site_data/search_index.json`);
     if (!response.ok) throw new Error('Falha ao carregar o índice');
     searchIndex = await response.json();
   } catch (err) {
     console.error(err);
-    document.getElementById('searchResults').innerHTML = '<li class="search-error">Erro ao carregar o índice de pesquisa. Verifique sua conexão.</li>';
+    if (resultsEl) resultsEl.innerHTML = '<li class="search-error">Erro ao carregar o índice.</li>';
   } finally {
     isFetchingIndex = false;
   }
-  
+
   return searchIndex;
 }
 
-function openSearch() {
+window.openSearch = function () {
   const modal = document.getElementById('searchModal');
   const input = document.getElementById('searchInput');
   if (modal) {
     modal.classList.add('active');
-    input.focus();
-    // Pre-fetch the index as soon as search is opened
+    if (input) input.focus();
     getSearchIndex();
   }
 }
 
-function closeSearch() {
+window.closeSearch = function () {
   const modal = document.getElementById('searchModal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
+  if (modal) modal.classList.remove('active');
 }
 
 function performSearch(query) {
   const resultsEl = document.getElementById('searchResults');
   if (!query || query.trim().length < 3) {
-    resultsEl.innerHTML = '<li class="search-empty">Digite pelo menos 3 caracteres para buscar.</li>';
+    if (resultsEl) resultsEl.innerHTML = '<li class="search-empty">Digite pelo menos 3 caracteres...</li>';
     return;
   }
-  
-  if (!searchIndex) return; // Still loading, getSearchIndex will handle it
-  
+
+  if (!searchIndex) return;
+
   const q = query.toLowerCase().trim();
   const filterNodes = document.querySelectorAll('input[name="searchFilter"]');
   let filterMode = 'all';
@@ -112,523 +254,345 @@ function performSearch(query) {
   }
 
   let results = [];
-  
-  // Search through index
   for (let item of searchIndex) {
     let score = 0;
-    let matchTitle = false;
+    let matchTitle = item.t.toLowerCase().includes(q);
     let matchContent = false;
-    
-    // Exactly Title
-    if (item.t.toLowerCase() === q) {
-      matchTitle = true;
-      score += 100;
-    }
-    // Sub-title match
-    else if (item.t.toLowerCase().includes(q)) {
-      matchTitle = true;
-      score += 50;
-    }
-    
-    // Content match
+
+    if (item.t.toLowerCase() === q) score += 100;
+    else if (matchTitle) score += 50;
+
     const cLower = item.c.toLowerCase();
     const cIdx = cLower.indexOf(q);
     if (cIdx !== -1) {
       matchContent = true;
       score += 10;
-      // Extract a snippet of content around the match for context
       const start = Math.max(0, cIdx - 60);
       const end = Math.min(item.c.length, cIdx + query.length + 60);
       let snippet = item.c.substring(start, end);
       if (start > 0) snippet = '...' + snippet;
       if (end < item.c.length) snippet = snippet + '...';
-      
       item.snippet = snippet;
     }
 
-    // Apply Filters
     if (filterMode === 'title' && !matchTitle) continue;
     if (filterMode === 'content' && !matchContent) continue;
     if (score === 0) continue;
-    
-    // Add to results
+
     results.push({ ...item, score });
   }
-  
-  // Sort by score (best match first), then take top 50 to avoid DOM lag
+
   results.sort((a, b) => b.score - a.score);
   results = results.slice(0, 50);
-  
+
   if (results.length === 0) {
-    resultsEl.innerHTML = '<li class="search-empty">Nenhum resultado encontrado.</li>';
+    if (resultsEl) resultsEl.innerHTML = '<li class="search-empty">Nenhum resultado.</li>';
     return;
   }
-  
-  // Render results
-  const basePath = window.location.href.includes('/shumeic') ? '../' : './';
-  
+
+  const basePath = window.location.pathname.includes('/shumeic') ? '../' : './';
   resultsEl.innerHTML = results.map(r => {
-    const fileBase = r.f.replace('.json', '.html').replace('.txt', '.html');
     const href = `${basePath}reader.html?vol=${r.v}&file=${r.f}&search=${encodeURIComponent(query)}`;
-    
-    const highlightedSnippet = (r.snippet || '').replace(new RegExp(`(${query})`, 'gi'), '<mark class="search-highlight">$1</mark>');
-    
+    // Escape query for regex
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const highlight = (r.snippet || '').replace(new RegExp(`(${escapedQuery})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+    return `<li><a href="${href}" class="search-result-item"><div class="search-result-title">${r.t} <span style="font-size:0.8rem; color:var(--text-muted);">(Vol ${r.v.slice(-1)})</span></div><div class="search-result-context">${highlight}</div></a></li>`;
+  }).join('');
+}
+
+// --- History Logic ---
+window.openHistory = function () {
+  const modal = document.getElementById('historyModal');
+  const resultsEl = document.getElementById('historyResults');
+  if (modal && resultsEl) {
+    modal.classList.add('active');
+    renderHistory();
+  }
+}
+
+window.closeHistory = function () {
+  const modal = document.getElementById('historyModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function renderHistory() {
+  const resultsEl = document.getElementById('historyResults');
+  if (!resultsEl) return;
+
+  const history = JSON.parse(localStorage.getItem('readHistory') || '[]');
+  const basePath = window.location.pathname.includes('/shumeic') ? '../' : './';
+
+  if (history.length === 0) {
+    resultsEl.innerHTML = '<li class="search-empty">Nenhum histórico.</li>';
+    return;
+  }
+
+  resultsEl.innerHTML = history.map(item => {
+    const href = `${basePath}reader.html?vol=${item.vol}&file=${item.file}`;
+    const date = new Date(item.time).toLocaleString();
+    return `<li><a href="${href}" class="search-result-item"><div class="search-result-title">${item.title || item.file} <span style="font-size:0.8rem; color:var(--text-muted);">(Vol ${item.vol.slice(-1)})</span></div><div class="search-result-context">${date}</div></a></li>`;
+  }).join('');
+}
+
+// --- Bookmarks Logic ---
+window.openBookmarksList = function () {
+  const modal = document.getElementById('bookmarksModal');
+  const resultsEl = document.getElementById('bookmarksResults');
+  if (modal && resultsEl) {
+    modal.classList.add('active');
+    updateBookmarksList();
+  }
+}
+
+window.closeBookmarksList = function () {
+  const modal = document.getElementById('bookmarksModal');
+  if (modal) modal.classList.remove('active');
+}
+
+function updateBookmarksList() {
+  const resultsEl = document.getElementById('bookmarksResults');
+  if (!resultsEl) return;
+
+  const bookmarks = JSON.parse(localStorage.getItem('shumei_bookmarks') || '[]');
+  const basePath = window.location.pathname.includes('/shumeic') ? '../' : './';
+
+  if (bookmarks.length === 0) {
+    resultsEl.innerHTML = '<li class="search-empty">Nenhum favorito.</li>';
+    return;
+  }
+
+  resultsEl.innerHTML = bookmarks.map((b, idx) => {
+    const href = `${basePath}reader.html?vol=${b.vol}&file=${b.file}`;
     return `
-      <li>
+      <li style="position:relative">
         <a href="${href}" class="search-result-item">
-          <div class="search-result-title">${r.t} <span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal;">(Vol ${r.v.slice(-1)})</span></div>
-          <div class="search-result-context">${highlightedSnippet}</div>
+          <div class="search-result-title">${b.title} <span style="font-size:0.8rem; color:var(--text-muted);">(Vol ${b.vol.slice(-1)})</span></div>
+          <div class="search-result-context">${b.vol} / ${b.file}</div>
         </a>
+        <button onclick="removeBookmarkByIndex(${idx})" style="position:absolute; right:15px; top:50%; transform:translateY(-50%); background:none; border:none; color:#ff3b30; cursor:pointer; font-size:1.2rem; padding:10px;">&times;</button>
       </li>
     `;
   }).join('');
 }
 
+window.removeBookmarkByIndex = function (idx) {
+  const bookmarks = JSON.parse(localStorage.getItem('shumei_bookmarks') || '[]');
+  bookmarks.splice(idx, 1);
+  localStorage.setItem('shumei_bookmarks', JSON.stringify(bookmarks));
+  updateBookmarksList();
+  if (typeof window.checkBookmarkState === 'function') window.checkBookmarkState();
+};
+
+// --- DOM Initialization and Shared Listeners ---
 document.addEventListener('DOMContentLoaded', () => {
-  const closeBtn = document.getElementById('searchClose');
-  const modalBtn = document.getElementById('searchModal');
+  const closeSearchBtn = document.getElementById('searchClose');
+  const searchModal = document.getElementById('searchModal');
   const searchInput = document.getElementById('searchInput');
-  
-  if (closeBtn) closeBtn.addEventListener('click', closeSearch);
-  if (modalBtn) modalBtn.addEventListener('click', (e) => {
+
+  if (closeSearchBtn) closeSearchBtn.addEventListener('click', closeSearch);
+  if (searchModal) searchModal.addEventListener('click', (e) => {
     if (e.target.id === 'searchModal') closeSearch();
   });
-  
+
+  const historyModal = document.getElementById('historyModal');
+  if (historyModal) historyModal.addEventListener('click', (e) => {
+    if (e.target.id === 'historyModal') closeHistory();
+  });
+
+  const bookmarksModal = document.getElementById('bookmarksModal');
+  if (bookmarksModal) bookmarksModal.addEventListener('click', (e) => {
+    if (e.target.id === 'bookmarksModal') closeBookmarksList();
+  });
+
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeSearch();
-    // Ctrl+K or Cmd+K to open search
+    if (e.key === 'Escape') {
+      closeSearch();
+      closeHistory();
+      closeBookmarksList();
+    }
     if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
       e.preventDefault();
       openSearch();
     }
   });
-  
+
   const triggerSearch = () => {
     clearTimeout(searchTimeout);
     const query = searchInput.value;
-    
     const resultsEl = document.getElementById('searchResults');
-    resultsEl.innerHTML = '<li class="search-loading">Buscando...</li>';
-    
+    if (resultsEl) resultsEl.innerHTML = '<li class="search-loading">Buscando...</li>';
     searchTimeout = setTimeout(async () => {
       await getSearchIndex();
       performSearch(query);
-    }, 400); // 400ms debounce
+    }, 400);
   };
 
-  if (searchInput) {
-    searchInput.addEventListener('input', triggerSearch);
-  }
+  if (searchInput) searchInput.addEventListener('input', triggerSearch);
 
-  // Also trigger search when changing filters if there's text
-  const filterNodes = document.querySelectorAll('input[name="searchFilter"]');
-  filterNodes.forEach(node => {
-     node.addEventListener('change', () => {
-         if (searchInput.value.trim().length >= 3) {
-             triggerSearch();
-         }
-     });
-  });
-
-  // Add history events
-  const historyModalBtn = document.getElementById('historyModal');
-  if (historyModalBtn) historyModalBtn.addEventListener('click', (e) => {
-    if (e.target.id === 'historyModal') closeHistory();
-  });
-
-  // Create Bookmarks Modal if it doesn't exist
-  if (!document.getElementById('bookmarksModal')) {
-      const bModal = document.createElement('div');
-      bModal.className = 'search-modal-overlay';
-      bModal.id = 'bookmarksModal';
-      bModal.innerHTML = `
-        <div class="search-modal">
-          <div class="search-header">
-            <h2 style="font-size: 1.2rem; margin:0; color: var(--accent);">Meus Favoritos</h2>
-            <button class="search-close" onclick="closeBookmarks()">&times;</button>
-          </div>
-          <ul class="search-results" id="bookmarksResults"></ul>
-        </div>
-      `;
-      bModal.addEventListener('click', (e) => {
-          if (e.target.id === 'bookmarksModal') closeBookmarks();
-      });
-      document.body.appendChild(bModal);
-  }
-});
-
-// --- Navigation History Logic ---
-function openHistory() {
-  const modal = document.getElementById('historyModal');
-  const resultsEl = document.getElementById('historyResults');
-  if (modal && resultsEl) {
-    modal.classList.add('active');
-    
-    const basePath = window.location.href.includes('/shumeic') ? '../' : './';
-    const history = JSON.parse(localStorage.getItem('readHistory') || '[]');
-    
-    if (history.length === 0) {
-      resultsEl.innerHTML = '<li class="search-empty">Nenhum histórico recente.</li>';
-      return;
-    }
-    
-    resultsEl.innerHTML = history.map(r => {
-      const href = `${basePath}reader.html?vol=${r.vol}&file=${r.file}`;
-      const date = new Date(r.time);
-      const timeStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit' });
-      
-      return `
-        <li>
-          <a href="${href}" class="search-result-item">
-            <div class="search-result-title">${r.title} <span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal;">(Vol ${r.vol.slice(-1)})</span></div>
-            <div class="search-result-context">Visualizado em ${timeStr}</div>
-          </a>
-        </li>
-      `;
-    }).join('');
-  }
-}
-
-function closeHistory() {
-  const modal = document.getElementById('historyModal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
-// --- Bookmarks List Logic ---
-function openBookmarks() {
-  const modal = document.getElementById('bookmarksModal');
-  const resultsEl = document.getElementById('bookmarksResults');
-  if (modal && resultsEl) {
-    modal.classList.add('active');
-    
-    const basePath = window.location.href.includes('/shumeic') ? '../' : './';
-    const bookmarks = JSON.parse(localStorage.getItem('shumei_bookmarks') || '[]');
-    
-    if (bookmarks.length === 0) {
-      resultsEl.innerHTML = '<li class="search-empty">Você ainda não tem ensinamentos favoritos.</li>';
-      return;
-    }
-    
-    // Reverse array to show newest first
-    const reversed = [...bookmarks].reverse();
-    
-    resultsEl.innerHTML = reversed.map(r => {
-      const href = `${basePath}reader.html?vol=${r.vol}&file=${r.file}`;
-      return `
-        <li style="position:relative;">
-          <a href="${href}" class="search-result-item" style="padding-right: 40px;">
-            <div class="search-result-title">${r.title} <span style="font-size:0.8rem; color:var(--text-muted); font-weight:normal;">(Vol ${r.vol.slice(-1)})</span></div>
-            <div class="search-result-context">${r.theme || 'Ensinamento'}</div>
-          </a>
-          <button onclick="removeBookmarkItem('${r.vol}', '${r.file}'); event.stopPropagation();" 
-            style="position:absolute; right:15px; top:50%; transform:translateY(-50%); background:none; border:none; font-size:1.2rem; cursor:pointer; color:var(--text-muted);"
-            title="Remover Favorito">×</button>
-        </li>
-      `;
-    }).join('');
-  }
-}
-
-function removeBookmarkItem(volId, filename) {
-    let bookmarks = JSON.parse(localStorage.getItem('shumei_bookmarks') || '[]');
-    const existingIndex = bookmarks.findIndex(b => b.vol === volId && b.file === filename);
-    if (existingIndex >= 0) {
-        bookmarks.splice(existingIndex, 1);
-        localStorage.setItem('shumei_bookmarks', JSON.stringify(bookmarks));
-        // Refresh the list immediately
-        openBookmarks(); 
-        // If on reader page, update the star
-        if (typeof window.checkBookmarkState === 'function') {
-            window.checkBookmarkState();
-        }
-    }
-}
-
-function closeBookmarks() {
-  const modal = document.getElementById('bookmarksModal');
-  if (modal) {
-    modal.classList.remove('active');
-  }
-}
-
-// --- Mobile Hamburger Menu ---
-document.addEventListener('DOMContentLoaded', () => {
-  const nav = document.querySelector('.header__nav');
-  if (!nav) return;
-
-  // Create hamburger button
-  const hamburger = document.createElement('button');
-  hamburger.className = 'hamburger';
-  hamburger.setAttribute('aria-label', 'Menu');
-  hamburger.innerHTML = '<span></span><span></span><span></span>';
-
-  // Insert before nav in header
-  const header = document.querySelector('.header');
-  if (header) {
-    // Insert between logo and nav
-    const logo = header.querySelector('.header__logo');
-    if (logo && logo.nextSibling) {
-      header.insertBefore(hamburger, logo.nextSibling);
-    }
-  }
-
-  hamburger.addEventListener('click', () => {
-    hamburger.classList.toggle('open');
-    nav.classList.toggle('open');
-  });
-
-  // Close nav when clicking a link
-  nav.querySelectorAll('a').forEach(a => {
-    a.addEventListener('click', () => {
-      hamburger.classList.remove('open');
-      nav.classList.remove('open');
+  document.querySelectorAll('input[name="searchFilter"]').forEach(node => {
+    node.addEventListener('change', () => {
+      if (searchInput && searchInput.value.trim().length >= 3) triggerSearch();
     });
   });
-
-  // Close nav when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!header.contains(e.target)) {
-      hamburger.classList.remove('open');
-      nav.classList.remove('open');
-    }
-  });
 });
 
-// --- Back to Top Button ---
-document.addEventListener('DOMContentLoaded', () => {
-  const btn = document.createElement('button');
-  btn.className = 'back-to-top';
-  btn.setAttribute('aria-label', 'Voltar ao topo');
-  btn.innerHTML = '↑';
-  document.body.appendChild(btn);
+// ============================================================
+// IMMERSION MODE — auto-hide header & toolbar after inactivity
+// Only active on reader pages
+// ============================================================
+(function () {
+  // Only run on reader.html
+  if (!window.location.pathname.includes('reader.html')) return;
 
-  btn.addEventListener('click', () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  });
+  const HIDE_DELAY = 4000; // ms of inactivity before hiding
+  const FADE_MS = 400;  // CSS transition duration
 
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 400) {
-      btn.classList.add('visible');
-    } else {
-      btn.classList.remove('visible');
-    }
-  }, { passive: true });
-});
+  // Add transition style to header and toolbar once DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    const header = document.querySelector('.header');
+    const toolbar = document.querySelector('.reader-toolbar');
+    if (!header && !toolbar) return;
 
-// --- Reading Progress Bar ---
-document.addEventListener('DOMContentLoaded', () => {
-  // Only show on reader pages (has topic-content)
-  const content = document.querySelector('.topic-content');
-  if (!content) return;
-
-  const bar = document.createElement('div');
-  bar.className = 'reading-progress';
-  document.body.prepend(bar);
-
-  window.addEventListener('scroll', () => {
-    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
-    const scrolled = docHeight > 0 ? (window.scrollY / docHeight) * 100 : 0;
-    bar.style.width = Math.min(100, scrolled) + '%';
-  }, { passive: true });
-});
-
-// --- Control Panel & Global Settings ---
-let readerFontSize = parseInt(localStorage.getItem('reader_font_size')) || 21;
-
-// Watch for reader content to be injected to apply font size
-const fontObserver = new MutationObserver(() => {
-    const contents = document.querySelectorAll('.topic-content');
-    if (contents.length > 0) {
-        contents.forEach(el => { el.style.fontSize = readerFontSize + 'px'; });
-    }
-});
-fontObserver.observe(document.body, { childList: true, subtree: true });
-
-function changeFontSize(dir) {
-    readerFontSize = Math.max(16, Math.min(30, readerFontSize + dir));
-    document.querySelectorAll('.topic-content').forEach(el => {
-      el.style.fontSize = readerFontSize + 'px';
-    });
-    localStorage.setItem('reader_font_size', readerFontSize);
-}
-
-function toggleLangSwitch() {
-    const currentLang = localStorage.getItem('site_lang') || 'pt';
-    const newLang = currentLang === 'pt' ? 'ja' : 'pt';
-    
-    // update label immediately before reload
-    const label = document.getElementById('cpLangLabel');
-    if (label) label.textContent = newLang === 'pt' ? 'PT-BR' : '日本語';
-    
-    if (typeof setLanguage === 'function') {
-        const url = window.location.href;
-        if (!url.includes('reader.html') && newLang === 'ja') {
-            window.location.href = 'index2.html';
-        } else if (!url.includes('reader.html') && newLang === 'pt') {
-            window.location.href = 'index.html';
-        } else {
-             setLanguage(newLang, true);
-        }
-    }
-}
-
-function updateCpThemeLabel() {
-    const label = document.getElementById('cpThemeLabel');
-    const icon = document.getElementById('cpThemeIcon');
-    if (!label) return;
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    label.textContent = isDark ? 'Ativado' : 'Desativado';
-}
-
-function toggleControlPanel() {
-    let cp = document.getElementById('controlPanelOverlay');
-    if (!cp) {
-        cp = document.createElement('div');
-        cp.className = 'search-modal-overlay';
-        cp.id = 'controlPanelOverlay';
-        document.body.appendChild(cp);
-        cp.onclick = (e) => { if (e.target.id === 'controlPanelOverlay') closeControlPanel(); };
-    }
-
-    const isReader = window.location.href.includes('reader.html');
-    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const currentLang = localStorage.getItem('site_lang') || 'pt';
-
-    cp.innerHTML = `
-        <div class="search-modal" style="max-width: 440px; padding-bottom: 32px;">
-            <div class="search-header">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <h2>Ajustes</h2>
-                    <button class="btn-zen" onclick="closeControlPanel()" style="padding: 0; width: 36px; height: 36px; border-radius: 50%; background: var(--border);">✕</button>
-                </div>
-            </div>
-
-            <div style="padding: 10px 32px; display: flex; flex-direction: column; gap: 32px;">
-                
-                <div class="panel-section">
-                    <div class="panel-row">
-                        <button class="btn-zen" onclick="toggleLangSwitch()" style="height: 56px; background: var(--accent-soft);">
-                            🌐 ${currentLang === 'pt' ? '日本語' : 'Português'}
-                        </button>
-                        <button class="btn-zen" onclick="toggleTheme(); toggleControlPanel();" style="height: 56px;">
-                            ${isDark ? '☀️ Claro' : '🌙 Escuro'}
-                        </button>
-                    </div>
-                </div>
-
-                ${isReader ? `
-                <div class="panel-section">
-                    <p class="panel-label">Leitura</p>
-                    <div class="panel-pill">
-                        <span style="font-size: 0.95rem; font-weight: 500;">Tamanho do texto</span>
-                        <div style="display: flex; gap: 4px;">
-                            <button class="btn-zen" onclick="changeFontSize(-1)" style="background: transparent; width: 44px; height: 44px; font-size: 1.1rem;">A-</button>
-                            <button class="btn-zen" onclick="changeFontSize(1)" style="background: transparent; width: 44px; height: 44px; font-size: 1.1rem;">A+</button>
-                        </div>
-                    </div>
-                </div>
-                ` : ''}
-
-                <div class="panel-section">
-                    <p class="panel-label">Biblioteca</p>
-                    <div style="display: flex; flex-direction: column; gap: 8px;">
-                        <button class="btn-zen" onclick="openHistory(); closeControlPanel();" style="justify-content: flex-start; padding: 16px 20px; background: var(--border); border-radius: 20px;">
-                            <span style="font-size: 1.25rem;">🕒</span> Histórico de leitura
-                        </button>
-                        <button class="btn-zen" onclick="openBookmarks(); closeControlPanel();" style="justify-content: flex-start; padding: 16px 20px; background: var(--border); border-radius: 20px;">
-                            <span style="font-size: 1.25rem;">⭐</span> Meus favoritos
-                        </button>
-                    </div>
-                </div>
-
-                ${isReader ? `
-                <div class="panel-section">
-                    <p class="panel-label">Ferramentas</p>
-                    <div class="panel-row" style="margin-bottom: 4px;">
-                        <button class="btn-zen" onclick="window.toggleTTS(); closeControlPanel();" style="flex-direction: column; padding: 20px; height: auto; gap: 10px; border-radius: 24px; background: var(--border);">
-                            <span style="font-size: 1.6rem;">🔊</span>
-                            <span style="font-size: 0.8rem; font-weight: 600;">Ouvir</span>
-                        </button>
-                        <button class="btn-zen" onclick="window.shareTopic(); closeControlPanel();" style="flex-direction: column; padding: 20px; height: auto; gap: 10px; border-radius: 24px; background: var(--border);">
-                            <span style="font-size: 1.6rem;">📤</span>
-                            <span style="font-size: 0.8rem; font-weight: 600;">Enviar</span>
-                        </button>
-                    </div>
-                    <button class="btn-zen" onclick="window.toggleBookmark(); closeControlPanel();" style="width: 100%; height: 60px; background: var(--accent); color: white; border-radius: 20px; font-weight: 600;">
-                         Salvar nos Favoritos
-                    </button>
-                </div>
-                ` : ''}
-
-            </div>
-        </div>
+    // Inject transition CSS once
+    const style = document.createElement('style');
+    style.textContent = `
+      .header, .reader-toolbar {
+        transition: opacity ${FADE_MS}ms ease, transform ${FADE_MS}ms ease !important;
+      }
+      .header.immersed {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateY(-8px);
+      }
+      .reader-toolbar.immersed {
+        opacity: 0;
+        pointer-events: none;
+        transform: translate(-50%, 12px);
+      }
     `;
+    document.head.appendChild(style);
 
-    setTimeout(() => cp.classList.add('active'), 10);
-}
+    let hideTimer = null;
 
-function closeControlPanel() {
-    const cp = document.getElementById('controlPanelOverlay');
-    if (cp) cp.classList.remove('active');
-}
-
-// --- Header Auto-Hide on Scroll ---
-document.addEventListener('DOMContentLoaded', () => {
-  const header = document.querySelector('.header');
-  if (!header) return;
-
-  let lastScrollY = 0;
-  let ticking = false;
-
-  const handleScroll = () => {
-    const currentY = window.scrollY;
-    if (currentY > lastScrollY && currentY > 120) {
-      header.classList.add('header--hidden');
-    } else {
-      header.classList.remove('header--hidden');
+    function showChrome() {
+      if (header) header.classList.remove('immersed');
+      if (toolbar) toolbar.classList.remove('immersed');
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(hideChrome, HIDE_DELAY);
     }
-    lastScrollY = currentY;
-    ticking = false;
-  };
 
-  window.addEventListener('scroll', () => {
-    if (!ticking) {
-      requestAnimationFrame(handleScroll);
-      ticking = true;
+    function hideChrome() {
+      // Don't hide if any modal/drawer is open
+      const anyOpen = document.querySelector(
+        '.search-modal-overlay.active, .drawer-overlay.active, .mobile-nav-overlay.open'
+      );
+      if (anyOpen) {
+        showChrome();
+        return;
+      }
+      if (header) header.classList.add('immersed');
+      if (toolbar) toolbar.classList.add('immersed');
     }
-  }, { passive: true });
-});
 
-// --- Keyboard Navigation Hint (reader) ---
-document.addEventListener('DOMContentLoaded', () => {
-  // Only on reader page
-  if (!window.location.href.includes('reader.html')) return;
+    // Events that reveal chrome
+    const wakeEvents = ['mousemove', 'mousedown', 'touchstart', 'touchmove', 'scroll', 'keydown', 'click'];
+    wakeEvents.forEach(evt => document.addEventListener(evt, showChrome, { passive: true }));
 
-  const hint = document.createElement('div');
-  hint.className = 'keyboard-hint';
-  hint.innerHTML = '<kbd>←</kbd> anterior &nbsp; próximo <kbd>→</kbd>';
-  document.body.appendChild(hint);
-
-  // Show hint after first scroll
-  let hintShown = false;
-  window.addEventListener('scroll', () => {
-    if (!hintShown && window.scrollY > 200) {
-      hint.classList.add('visible');
-      hintShown = true;
-      setTimeout(() => hint.classList.remove('visible'), 3000);
-    }
-  }, { passive: true, once: false });
-});
-
-// --- Service Worker Registration ---
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // Relative path needs to be correct depending on if we are in shumeic2/ etc.
-    const basePath = window.location.href.includes('/shumeic') ? '../' : './';
-    navigator.serviceWorker.register(basePath + 'sw.js')
-      .then(reg => console.log('Service Worker Registrado!', reg.scope))
-      .catch(err => console.error('Erro ao registrar Service Worker:', err));
+    // Start the timer
+    showChrome();
   });
+})();
+
+// ============================================================
+// JAPANESE SEARCH — update performSearch to use tj / cj fields
+// ============================================================
+// Override performSearch to also check Japanese title (tj) and content (cj)
+const _originalPerformSearch = performSearch;
+// Wrap performSearch to add Japanese field support
+function performSearch(query) {
+  const resultsEl = document.getElementById('searchResults');
+  if (!query || query.trim().length < 2) {
+    if (resultsEl) resultsEl.innerHTML = '<li class="search-empty">Digite pelo menos 2 caracteres...</li>';
+    return;
+  }
+
+  if (!searchIndex) return;
+
+  const q = query.trim();
+  const qLower = q.toLowerCase();
+  const activeLang = localStorage.getItem('site_lang') || 'pt';
+
+  const filterNodes = document.querySelectorAll('input[name="searchFilter"]');
+  let filterMode = 'all';
+  for (const node of filterNodes) {
+    if (node.checked) { filterMode = node.value; break; }
+  }
+
+  let results = [];
+  for (let item of searchIndex) {
+    let score = 0;
+
+    // PT fields (always available)
+    const tPt = (item.t || '').toLowerCase();
+    const cPt = (item.c || '').toLowerCase();
+    // JA fields (optional — added by updated build script)
+    const tJa = (item.tj || '').toLowerCase();
+    const cJa = (item.cj || '').toLowerCase();
+
+    // Choose primary fields based on active language
+    const titleSearch = activeLang === 'ja' ? (tJa || tPt) : tPt;
+    const contentSearch = activeLang === 'ja' ? (cJa || cPt) : cPt;
+    // Always search both languages for cross-language discoverability
+    const titleAlt = activeLang === 'ja' ? tPt : tJa;
+    const contentAlt = activeLang === 'ja' ? cPt : cJa;
+
+    let matchTitle = titleSearch.includes(qLower) || titleAlt.includes(qLower);
+    let matchContent = contentSearch.includes(qLower) || contentAlt.includes(qLower);
+
+    if (titleSearch === qLower || titleAlt === qLower) score += 100;
+    else if (matchTitle) score += 50;
+
+    if (matchContent) {
+      score += 10;
+      // Build snippet from whichever content matched
+      const raw = activeLang === 'ja' ? (item.cj || item.c || '') : (item.c || '');
+      const rawLower = raw.toLowerCase();
+      const idx = rawLower.indexOf(qLower);
+      if (idx !== -1) {
+        const start = Math.max(0, idx - 60);
+        const end = Math.min(raw.length, idx + q.length + 60);
+        let snippet = raw.substring(start, end);
+        if (start > 0) snippet = '...' + snippet;
+        if (end < raw.length) snippet += '...';
+        item.snippet = snippet;
+      }
+    }
+
+    if (filterMode === 'title' && !matchTitle) continue;
+    if (filterMode === 'content' && !matchContent) continue;
+    if (score === 0) continue;
+
+    results.push({ ...item, score });
+  }
+
+  results.sort((a, b) => b.score - a.score);
+  results = results.slice(0, 50);
+
+  if (results.length === 0) {
+    if (resultsEl) resultsEl.innerHTML = '<li class="search-empty">Nenhum resultado.</li>';
+    return;
+  }
+
+  const basePath = window.location.pathname.includes('/shumeic') ? '../' : './';
+  const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  resultsEl.innerHTML = results.map(r => {
+    const href = `${basePath}reader.html?vol=${r.v}&file=${r.f}&search=${encodeURIComponent(q)}`;
+    const displayTitle = (activeLang === 'ja' && r.tj) ? r.tj : r.t;
+    const highlight = (r.snippet || '')
+      .replace(new RegExp(`(${escapedQ})`, 'gi'), '<mark class="search-highlight">$1</mark>');
+    return `<li><a href="${href}" class="search-result-item">
+      <div class="search-result-title">${displayTitle} <span style="font-size:0.8rem;color:var(--text-muted)">(Vol ${r.v.slice(-1)})</span></div>
+      <div class="search-result-context">${highlight}</div>
+    </a></li>`;
+  }).join('');
 }

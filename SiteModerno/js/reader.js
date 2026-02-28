@@ -17,85 +17,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         const response = await fetch(`${basePath}${window.DATA_OUTPUT_DIR || 'site_data'}/${volId}_data_bilingual.json`);
         const json = await response.json();
-        if (window.speechSynthesis) window.speechSynthesis.cancel();
-
         let topicsFound = [];
 
-        // Flatten all unique files for navigation, build title & theme lookup
+        // Flatten all unique files for navigation
         const allFiles = [];
-        const fileTitleMap = {}; // filename -> pt title
-        const fileThemeMap = {}; // filename -> theme label
         json.themes.forEach(theme => {
-            const themeLabel = theme.name_pt || theme.name || '';
             theme.topics.forEach(topic => {
                 const f = topic.source_file || topic.filename || "";
-                if (f && !allFiles.includes(f)) {
-                    allFiles.push(f);
-                    // store title for nav labels
-                    const idxTitle = (window.GLOBAL_INDEX_TITLES?.[volId])?.[f];
-                    fileTitleMap[f] = idxTitle || topic.title_ptbr || topic.title_pt || topic.title || f;
-                    fileThemeMap[f] = themeLabel;
-                }
+                if (f && !allFiles.includes(f)) allFiles.push(f);
             });
         });
-
-        // --- Index Drawer Logic ---
-        if (!document.getElementById('indexDrawerOverlay')) {
-            const drawerBg = document.createElement('div');
-            drawerBg.className = 'search-modal-overlay';
-            drawerBg.id = 'indexDrawerOverlay';
-
-            const drawer = document.createElement('div');
-            drawer.className = 'search-modal';
-            drawer.style.maxWidth = '600px';
-            drawer.innerHTML = `
-                <div class="search-header">
-                    <h2>Índice — Vol ${volId.slice(-1)}</h2>
-                    <button class="search-close" onclick="toggleIndexDrawer()">&times;</button>
-                </div>
-                <div class="drawer-content" style="overflow-y: auto; height: calc(100% - 80px); padding: 0 24px 32px;">
-                    ${json.themes.map(theme => `
-                        <div class="drawer-section">
-                            <h3 class="drawer-section-title">${theme.name_pt || theme.name || 'Ensinamentos'}</h3>
-                            <div class="drawer-list">
-                                ${(() => {
-                    const uniqueMap = {};
-                    theme.topics.forEach(t => {
-                        const f = t.source_file || t.filename || "";
-                        if (f && !uniqueMap[f]) { uniqueMap[f] = t; }
-                    });
-                    return Object.values(uniqueMap).map(t => {
-                        const f = t.source_file || t.filename || "";
-                        const title = fileTitleMap[f] || f;
-                        const isActive = f === filename;
-                        return `<a href="?vol=${volId}&file=${f}" class="drawer-item ${isActive ? 'active' : ''}">
-                                            ${isActive ? '<span>&#x1F4D6;</span>' : '<span>&#x1F4C4;</span>'}
-                                            ${title}
-                                        </a>`;
-                    }).join('');
-                })()}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-            drawerBg.appendChild(drawer);
-            document.body.appendChild(drawerBg);
-
-            drawerBg.addEventListener('click', (e) => {
-                if (e.target.id === 'indexDrawerOverlay') toggleIndexDrawer();
-            });
-
-            window.toggleIndexDrawer = function () {
-                drawerBg.classList.toggle('active');
-                if (drawerBg.classList.contains('active')) {
-                    const activeEl = drawerBg.querySelector('a.active');
-                    if (activeEl) {
-                        setTimeout(() => activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
-                    }
-                }
-            };
-        }
 
         const currentIndex = allFiles.indexOf(filename);
         const prevFile = currentIndex > 0 ? allFiles[currentIndex - 1] : null;
@@ -135,10 +66,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             let mainTitleToDisplay = (isPt && indexTitle) ? indexTitle : fallbackTitle;
 
             // If title is generic or missing, peek into topics for a better one
-            // But only if there's no explicit title_ptbr available in the JSON data
-            const hasPtbrTitle = isPt && currentTopics.some(t => t.title_ptbr && t.title_ptbr.trim() !== '');
             const genericRegex = /O Método do Johrei|Princípio do Johrei|Sobre a Verdade|Verdade \d|Ensinamento \d|Parte \d|JH\d|JH \d|Publicação \d/i;
-            let isGeneric = !hasPtbrTitle && (!mainTitleToDisplay || genericRegex.test(mainTitleToDisplay));
+            let isGeneric = !mainTitleToDisplay || genericRegex.test(mainTitleToDisplay);
             if (isGeneric) {
                 for (let t of currentTopics) {
                     const raw = isPt ? (t.content_ptbr || t.content_pt || t.content) : t.content;
@@ -146,10 +75,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const doc = new DOMParser().parseFromString(raw, 'text/html');
                     const span = doc.querySelector('span, b, font');
                     if (span) {
-                        // Only use extracted span text if it's in Portuguese (not Japanese characters)
                         let extracted = span.textContent.trim().replace(/Ensinamento de Meishu-Sama:\s*|Orientação de Meishu-Sama:\s*|Palestra de Meishu-Sama:\s*|明主様御垂示\s*|明主様御講話\s*/gi, '');
-                        const hasJapanese = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]/.test(extracted);
-                        if (!hasJapanese && extracted.length > 5 && extracted.length < 150) {
+                        if (extracted.length > 5 && extracted.length < 150) {
                             mainTitleToDisplay = extracted;
                             isGeneric = false; // Successfully promoted a real title
                             break;
@@ -180,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const navSelect = document.getElementById('readerTopicSelect');
             if (navSelect) {
-                navSelect.innerHTML = '<option value="">Navegação por Publicações</option>';
+                navSelect.innerHTML = '<option value="">Lista de Tópicos</option>';
                 navSelect.style.display = 'none';
             }
 
@@ -255,15 +182,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Add topic to navigation select if multiple topics
                 if (navSelect && currentTopics.length > 1) {
-                    const doc = new DOMParser().parseFromString(formattedContent, 'text/html');
-                    const header = doc.querySelector('span');
-                    let extracted = header ? header.textContent.trim() : "";
-
-                    let pTitle = (extracted.length > 4 && extracted.length < 200) ? extracted : (isPt ? (topicData.publication_title_pt || topicData.title_ptbr) : topicData.title_ja);
+                    let pTitle = isPt ? (topicData.publication_title_pt || topicData.title_ptbr || topicData.title_pt) : (topicData.title_ja);
                     pTitle = pTitle || topicData.title || `Parte ${index + 1}`;
 
                     // Clean up prefixes if they are too long or generic
-                    let finalTitle = pTitle.replace(/Ensinamento de Meishu-Sama:\s*|Orientação de Meishu-Sama:\s*|Palestra de Meishu-Sama:\s*/gi, '').trim();
+                    let finalTitle = pTitle.replace(/^(Ensinamento|Orientação|Palestra) de Meishu-Sama\s*[-:]?\s*/i, '').trim();
+                    finalTitle = finalTitle.replace(/^"(.*?)"$/, '$1'); // Strip surrounding quotes
+                    finalTitle = finalTitle.replace(/\\"/g, '').trim();
 
                     if (!window._usedNavTitles) window._usedNavTitles = new Set();
                     if (window._usedNavTitles.has(finalTitle)) {
@@ -280,20 +205,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Check if the topic needs its title injected (if it's missing from the translation)
                 let injectedTitleHtml = "";
                 let specificTitle = isPt ? (topicData.title_ptbr || topicData.title_pt) : (topicData.title_ja || topicData.title);
-                // Inject for ALL topics (including index 0) when the topic's own title_ptbr
-                // differs from the generic page-level title shown in the h1 (from GLOBAL_INDEX_TITLES)
-                if (specificTitle && specificTitle !== mainTitleToDisplay) {
-                    // Only suppress injection if the title is already present as a HEADING element
-                    // (not just as text inside a paragraph — that causes false positives)
-                    const titleCheckDoc = new DOMParser().parseFromString(cleanedContent, 'text/html');
-                    let plainSearchTitle = specificTitle.replace(/Ensinamento de Meishu-Sama:\s*|Orientação de Meishu-Sama:\s*|Palestra de Meishu-Sama:\s*/gi, '').replace(/<[^>]+>/g, '').replace(/[\u3000\s\d\u30FB\u00B7\.\"\u300c\u300d\-]/g, '').toLowerCase();
-                    const headingEls = titleCheckDoc.querySelectorAll('span, b, h1, h2, h3, h4, h5, h6');
-                    let alreadyInHeading = false;
-                    headingEls.forEach(el => {
-                        const elText = el.textContent.replace(/[\u3000\s\d\u30FB\u00B7\.\"\u300c\u300d\-]/g, '').toLowerCase();
-                        if (elText.length > 5 && elText.includes(plainSearchTitle)) alreadyInHeading = true;
-                    });
-                    if (plainSearchTitle.length > 5 && !alreadyInHeading) {
+                if (index > 0 && specificTitle && specificTitle !== mainTitleToDisplay) {
+                    let plainContent = cleanedContent.replace(/<[^>]+>/g, '').replace(/[\u3000\s\d\u30FB\u00B7\.\"\u300c\u300d\-]/g, '').toLowerCase();
+                    let plainSearchTitle = specificTitle.replace(/Ensinamento de Meishu-Sama:\s*|Orientação de Meishu-Sama:\s*/gi, '').replace(/<[^>]+>/g, '').replace(/[\u3000\s\d\u30FB\u00B7\.\"\u300c\u300d\-]/g, '').toLowerCase();
+                    if (plainSearchTitle.length > 5 && !plainContent.includes(plainSearchTitle)) {
                         injectedTitleHtml = `<h2 class="injected-topic-title" style="margin-bottom: 24px; color: var(--text-main); font-size: 1.5rem; font-weight: 600;">${specificTitle}</h2>`;
                     }
                 }
@@ -326,16 +241,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <a href="${volPath}">Volume ${volId.slice(-1)}</a> <span>/</span>
                     <span style="color:var(--text-main)">Leitura</span>
                 </nav>
-                <div class="reader-container" id="reader-fade">
+                <div class="reader-container">
                     ${fullHtml}
                     ${navFooter}
                 </div>
             `;
-            // Fade-in animation
-            requestAnimationFrame(() => {
-                const fade = document.getElementById('reader-fade');
-                if (fade) { fade.style.opacity = '0'; requestAnimationFrame(() => { fade.style.transition = 'opacity 0.4s ease'; fade.style.opacity = '1'; }); }
-            });
 
             if (searchQuery) {
                 const q = searchQuery.toLowerCase();
@@ -380,139 +290,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const savedLang = localStorage.getItem('site_lang') || 'pt';
         renderContent(savedLang);
 
-        // --- Keyboard Navigation (← →) ---
-        document.addEventListener('keydown', (e) => {
-            // Don't intercept if user is typing in search or other inputs
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-            if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-
-            if (e.key === 'ArrowLeft' && prevFile) {
-                window.location.href = `?vol=${volId}&file=${prevFile}`;
-            } else if (e.key === 'ArrowRight' && nextFile) {
-                window.location.href = `?vol=${volId}&file=${nextFile}`;
-            }
-        });
-
     } catch (err) {
         container.innerHTML = `<div class="error">Erro ao carregar o ensinamento.</div>`;
     }
 });
 
 // setLanguage is now defined globally in toggle.js
-
-// --- Bookmarks Logic ---
-window.toggleBookmark = function () {
-    const params = new URLSearchParams(window.location.search);
-    const volId = params.get('vol');
-    const filename = params.get('file');
-    if (!volId || !filename) return;
-
-    let bTitle = window._currentReaderTitle || filename;
-    let bTheme = window._currentReaderTheme || '';
-
-    let bookmarks = JSON.parse(localStorage.getItem('shumei_bookmarks') || '[]');
-    const existingIndex = bookmarks.findIndex(b => b.vol === volId && b.file === filename);
-    const btn = document.getElementById('btn-bookmark');
-
-    if (existingIndex >= 0) {
-        bookmarks.splice(existingIndex, 1);
-        if (btn) {
-            btn.classList.remove('active');
-            btn.textContent = '☆';
-        }
-    } else {
-        bookmarks.push({ vol: volId, file: filename, title: bTitle, theme: bTheme, date: new Date().toISOString() });
-        if (btn) {
-            btn.classList.add('active');
-            btn.textContent = '★';
-        }
-    }
-    localStorage.setItem('shumei_bookmarks', JSON.stringify(bookmarks));
-};
-
-window.checkBookmarkState = function () {
-    const params = new URLSearchParams(window.location.search);
-    const volId = params.get('vol');
-    const filename = params.get('file');
-    let bookmarks = JSON.parse(localStorage.getItem('shumei_bookmarks') || '[]');
-    const btn = document.getElementById('btn-bookmark');
-
-    if (btn) {
-        if (bookmarks.some(b => b.vol === volId && b.file === filename)) {
-            btn.classList.add('active');
-            btn.textContent = '★';
-        } else {
-            btn.classList.remove('active');
-            btn.textContent = '☆';
-        }
-    }
-};
-
-// --- TTS Logic ---
-window.toggleTTS = function () {
-    const btn = document.getElementById('btn-tts');
-
-    // Stop reading if it's already speaking or paused
-    if (window.speechSynthesis.speaking) {
-        window.speechSynthesis.cancel();
-        if (btn) btn.classList.remove('active');
-        return;
-    }
-
-    const contents = Array.from(document.querySelectorAll('.topic-content')).map(el => el.innerText).join('\n\n');
-    if (!contents.trim()) return;
-
-    const utterance = new SpeechSynthesisUtterance(contents);
-    const currentLang = localStorage.getItem('site_lang') || 'pt';
-    utterance.lang = currentLang === 'ja' ? 'ja-JP' : 'pt-BR';
-    utterance.rate = 1.0;
-    utterance.pitch = 1.0;
-
-    // Try to pick a natural voice if available
-    const voices = window.speechSynthesis.getVoices();
-    const preferredVoice = voices.find(v => v.lang.startsWith(utterance.lang) && (v.name.includes('Google') || v.name.includes('Luciana') || v.name.includes('Daniel')));
-    if (preferredVoice) utterance.voice = preferredVoice;
-
-    utterance.onend = () => {
-        if (btn) btn.classList.remove('active');
-    };
-    utterance.onerror = () => {
-        if (btn) btn.classList.remove('active');
-    };
-
-    window.speechSynthesis.speak(utterance);
-    if (btn) btn.classList.add('active');
-};
-
-// Stop TTS if user leaves page
-window.addEventListener('beforeunload', () => {
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
-});
-
-// --- Share Logic ---
-window.shareTopic = async function () {
-    const url = window.location.href;
-    const title = window._currentReaderTitle ? `Ensinamento: ${window._currentReaderTitle}` : 'Ensinamento de Meishu-Sama';
-    const text = 'Leia este ensinamento de Meishu-Sama na Biblioteca Sagrada:';
-
-    if (navigator.share) {
-        try {
-            await navigator.share({ title, text, url });
-        } catch (err) {
-            console.log('Compartilhamento cancelado', err);
-        }
-    } else {
-        try {
-            await navigator.clipboard.writeText(`${text}\n${title}\n${url}`);
-            const btn = document.getElementById('btn-share');
-            if (btn) {
-                const oldContent = btn.innerHTML;
-                btn.innerHTML = '✅';
-                setTimeout(() => btn.innerHTML = oldContent, 2000);
-            }
-            alert('Link copiado para a área de transferência!');
-        } catch (err) {
-            alert('Não foi possível copiar o link.');
-        }
-    }
-};

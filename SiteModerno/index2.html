@@ -5,7 +5,7 @@
   <title>Ensinamentos - Biblioteca Sagrada</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="stylesheet" href="css/styles.css">
-  <script src="js/toggle.js?v=1772160138"></script>
+  <script src="js/toggle.js?v=1772246362"></script>
   <script>
     // Reader handles its own initialization that differs from Home/Index
     if (!window.location.href.includes('reader.html')) {
@@ -36,8 +36,11 @@
        </select>
     </div>
     <div class="controls">
+       <button class="btn-zen" onclick="openHistory()" title="Histórico de Navegação">🕒</button>
        <button class="btn-zen" onclick="openSearch()" title="Buscar">🔍</button>
-       <button class="btn-zen" onclick="toggleControlPanel()" title="Painel de Controle">⚙️</button>
+       <button class="btn-zen active" id="btn-pt" onclick="if(typeof setLanguage === 'function') setLanguage('pt');">PT-BR</button>
+       <button class="btn-zen" id="btn-ja" onclick="if(typeof setLanguage === 'function') setLanguage('ja'); else window.location.href='index2.html';">日本語</button>
+       <button class="btn-zen" onclick="toggleTheme()" title="Mudar Tema">☯</button>
     </div>
   </header>
   <main class="main">

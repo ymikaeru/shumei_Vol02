@@ -1896,22 +1896,39 @@ def build_search_index():
                 title = topic.get('title_ptbr') or topic.get('title_pt') or topic.get('title', '')
                 content = topic.get('content_ptbr') or topic.get('content_pt') or topic.get('content', '')
                 
+                # Japanese fields
+                title_ja = topic.get('title_ja') or ''
+                content_ja_raw = topic.get('content_ja') or topic.get('content', '')
+                
                 # Strip HTML from content for a clean search index
                 soup = BeautifulSoup(content, "html.parser")
                 clean_text = soup.get_text(separator=" ", strip=True)
+                
+                # Strip HTML from Japanese content
+                soup_ja = BeautifulSoup(content_ja_raw, "html.parser")
+                clean_text_ja = soup_ja.get_text(separator=" ", strip=True)
+                # Only store JA content if it's actually Japanese (not just a copy of PT)
+                if clean_text_ja == clean_text:
+                    clean_text_ja = ''
                 
                 if clean_text:
                     src_file = topic.get('source_file') or topic.get('filename') or ''
                     filename = os.path.basename(src_file) if src_file else ''
                     index_title = GLOBAL_INDEX_TITLES.get(vol_id, {}).get(filename, '')
                     
-                    # Store only essential fields to keep size small
-                    search_data.append({
+                    entry = {
                         'v': vol_id,
                         'f': filename,
                         't': index_title if index_title else title.strip(),
                         'c': clean_text
-                    })
+                    }
+                    # Only add Japanese fields if they have unique content (saves file size)
+                    if title_ja and title_ja != title.strip():
+                        entry['tj'] = title_ja.strip()
+                    if clean_text_ja:
+                        entry['cj'] = clean_text_ja
+                    
+                    search_data.append(entry)
                     
     index_path = os.path.join(OUTPUT_DIR, DATA_OUTPUT_DIR, 'search_index.json')
     with open(index_path, 'w', encoding='utf-8') as f:
